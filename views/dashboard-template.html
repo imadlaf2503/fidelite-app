@@ -323,32 +323,44 @@
     }
 
     // AJOUT CLIENT
-    document.getElementById('addCustomerForm').onsubmit = async (e) => {
-        e.preventDefault();
-        const prenom = document.getElementById('add_prenom').value;
-        const nom = document.getElementById('add_nom').value;
-        const phone = phoneInputAdd.getNumber();
-        const email = document.getElementById('add_email').value;
+    // AJOUTER CLIENT (RECOMMANDÉ)
+document.getElementById('addCustomerForm').onsubmit = async (e) => {
+    e.preventDefault();
+    
+    const prenom = document.getElementById('add_prenom').value;
+    const nom = document.getElementById('add_nom').value;
+    const phone = phoneAdd.getNumber(); // Récupère le format international (+33...)
+    const email = document.getElementById('add_email').value;
 
-        const { data, error } = await sb.from('customers').insert([
-            { 
-                prenom: prenom, 
-                nom: nom, 
-                telephone: phone, 
-                email: email, 
-                business_id: "{{business_id}}", 
-                points: 1 
-            }
-        ]).select();
+    // 1. Insertion avec .select() pour obtenir la réponse de Supabase
+    const { data, error } = await sb.from('customers').insert([{
+        prenom: prenom,
+        nom: nom,
+        telephone: phone,
+        email: email,
+        business_id: "{{business_id}}",
+        points: 1
+    }]).select(); // <--- C'est ici que la magie opère
 
-        if (error) {
-            alert("Erreur: " + error.message);
-        } else {
-            const msg = encodeURIComponent(`Bonjour ${prenom} ! Bienvenue chez {{nom}}. Votre carte de fidélité est activée avec 1 point ! Suivez vos points ici : https://fidelite-app-n2cz.onrender.com/card/{{slug}}?phone=${phone.replace('+', '')}`);
-            window.open(`https://wa.me/${phone.replace('+', '')}?text=${msg}`, '_blank');
-            location.reload();
-        }
-    };
+    if (error) {
+        alert("Erreur lors de la création : " + error.message);
+    } else if (data && data.length > 0) {
+        // 2. On récupère l'ID généré automatiquement par Supabase
+        const newId = data[0].id;
+
+        // 3. On construit le lien direct vers la carte
+        const cardUrl = `https://fidelite-app-n2cz.onrender.com/my-card/${newId}`;
+        
+        // 4. Préparation du message WhatsApp
+        const message = `Bonjour ${prenom} ! 👋\n\nBienvenue chez {{nom}} ! ✨\nVotre carte de fidélité est prête avec 1 point offert.\n\nRetrouvez-la ici à tout moment :\n${cardUrl}`;
+        
+        const waLink = `https://wa.me/${phone.replace('+', '')}?text=${encodeURIComponent(message)}`;
+
+        // 5. Action
+        window.open(waLink, '_blank');
+        location.reload();
+    }
+};
 
     // MODIFIER PASS
     document.getElementById('changePasswordForm').onsubmit = async (e) => {
