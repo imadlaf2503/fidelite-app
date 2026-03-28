@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accès Sécurisé | {{nom}}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background-color: #000; font-family: 'Inter', sans-serif; color: white; }
+        .glass-input { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); transition: all 0.3s ease; }
+        .glass-input:focus { border-color: #6366f1; background: rgba(99, 102, 241, 0.05); box-shadow: 0 0 20px rgba(99, 102, 241, 0.2); outline: none; }
+        .btn-glow { background: #6366f1; box-shadow: 0 0 15px rgba(99, 102, 241, 0.4); transition: all 0.2s; }
+        .btn-glow:active { transform: scale(0.95); box-shadow: 0 0 5px rgba(99, 102, 241, 0.2); }
+        .floating-label { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.2em; color: #64748b; }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-6">
+
+    <div class="text-center mb-10">
+        <div class="relative inline-block">
+            <img src="{{logo_url}}" onerror="this.src='https://via.placeholder.com/100?text=LOGO'" 
+                 class="w-24 h-24 object-contain mb-6 bg-white p-3 rounded-[2rem] shadow-2xl relative z-10">
+            <div class="absolute inset-0 bg-indigo-600 blur-2xl opacity-20 rounded-full"></div>
+        </div>
+        <h1 class="text-2xl font-black uppercase tracking-tighter">{{nom}}</h1>
+        <p class="floating-label mt-2 text-indigo-500">Espace Commerçant Sécurisé</p>
+    </div>
+
+    <div class="w-full max-w-sm">
+        <form id="loginForm" class="space-y-6">
+            
+            <div class="relative">
+                <label class="floating-label ml-4 mb-2 block">Identifiant d'accès (Email)</label>
+                <div class="relative mb-4">
+                    <i class="fa-solid fa-envelope absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 text-sm"></i>
+                    <input type="email" 
+                           id="emailInput"
+                           placeholder="commercant@test.com" 
+                           class="glass-input w-full py-5 pl-14 pr-6 rounded-3xl text-white font-medium text-lg"
+                           required>
+                </div>
+
+                <label class="floating-label ml-4 mb-2 block">Mot de passe</label>
+                <div class="relative">
+                    <i class="fa-solid fa-lock absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 text-sm"></i>
+                    <input type="password" 
+                           id="passInput"
+                           placeholder="••••••••" 
+                           class="glass-input w-full py-5 pl-14 pr-6 rounded-3xl text-white font-medium tracking-widest text-lg"
+                           required>
+                </div>
+            </div>
+
+            <button type="submit" id="submitBtn" class="btn-glow w-full py-5 rounded-3xl text-white font-black uppercase tracking-widest text-sm mt-4 flex items-center justify-center gap-3">
+                <span>Déverrouiller</span> <i class="fa-solid fa-arrow-right text-xs"></i>
+            </button>
+            
+        </form>
+
+        <p id="statusMsg" class="text-center text-slate-600 text-[10px] mt-10 font-medium uppercase tracking-widest">
+            Session : <span class="text-slate-400">{{slug}}</span>
+        </p>
+    </div>
+
+    <script>
+        // ON UTILISE UN NOM DIFFÉRENT ICI : supabaseClient au lieu de supabase
+        const supabaseClient = supabase.createClient("{{supabase_url}}", "{{supabase_key}}");
+
+        const loginForm = document.getElementById('loginForm');
+        const statusMsg = document.getElementById('statusMsg');
+        const submitBtn = document.getElementById('submitBtn');
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('emailInput').value.trim();
+            const password = document.getElementById('passInput').value;
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fa-solid fa-circle-notch animate-spin"></i>';
+            statusMsg.innerText = "Vérification en cours...";
+
+            // Utilisation du nouveau nom de variable
+            const { data, error } = await supabaseClient.auth.signInWithPassword({
+                email: email,
+                password: password,
+            });
+
+            if (error) {
+                statusMsg.innerHTML = `<span class="text-red-500">ERREUR : ${error.message}</span>`;
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Déverrouiller <i class="fa-solid fa-arrow-right ml-2"></i>';
+            } else {
+                statusMsg.innerHTML = `<span class="text-green-500 font-black">ACCÈS AUTORISÉ</span>`;
+                
+                // On stocke le token localement
+                localStorage.setItem('sb-token', data.session.access_token);
+
+                // REDIRECTION AVEC LE TOKEN DANS L'URL POUR LE SERVEUR
+                setTimeout(() => {
+                    window.location.href = "/dashboard/{{slug}}?auth=" + data.session.access_token;
+                }, 800);
+            }
+        });
+
+        window.onload = () => document.getElementById('emailInput').focus();
+    </script>
+</body>
+</html>

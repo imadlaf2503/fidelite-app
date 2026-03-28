@@ -1,0 +1,21 @@
+{
+  "short_name": "{{nom}} CF",
+  "name": "Fidélité {{nom}}",
+  "icons": [
+    {
+      "src": "{{logo_url}}",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "{{logo_url}}",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "start_url": "/my-card/{{customer_id}}",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "display": "standalone",
+  "scope": "/"
+}

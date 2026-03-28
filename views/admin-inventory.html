@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | Inventaire des Commerces</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        
+        .card-stats { background: white; border: 1px solid #e2e8f0; border-radius: 24px; transition: all 0.3s; }
+        .card-stats:hover { border-color: #6366f1; transform: translateY(-2px); }
+        
+        .search-bar { background: white; border: 1px solid #e2e8f0; border-radius: 16px; transition: all 0.2s; }
+        .search-bar:focus-within { border-color: #6366f1; box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.05); }
+
+        .table-container { background: white; border: 1px solid #e2e8f0; border-radius: 24px; overflow: hidden; }
+        
+        .btn-primary { background: #0f172a; color: white; border-radius: 14px; transition: all 0.2s; }
+        .btn-primary:hover { background: #334155; transform: scale(1.02); }
+
+        .btn-logout { background: #fef2f2; color: #ef4444; border: 1px solid #fee2e2; border-radius: 14px; transition: all 0.2s; }
+        .btn-logout:hover { background: #ef4444; color: white; transform: scale(1.02); }
+    </style>
+</head>
+<body class="min-h-screen p-6 md:p-10">
+
+    <div class="max-w-7xl mx-auto">
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-6">
+            <div>
+                <h1 class="text-3xl font-black tracking-tight text-slate-900 uppercase">Gestion <span class="text-indigo-600">Partenaires</span></h1>
+                <p class="text-slate-500 text-xs font-bold uppercase tracking-widest mt-1">Contrôle centralisé du réseau de fidélité</p>
+            </div>
+            <div class="flex flex-wrap gap-3">
+                <a href="/admin/logs" class="bg-white border border-slate-200 text-slate-600 px-5 py-3 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-50 transition">
+                    <i class="fa-solid fa-list-ul mr-2"></i> Logs
+                </a>
+                <button onclick="exportToCSV()" class="bg-white border border-slate-200 text-slate-600 px-5 py-3 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-50 transition">
+                    <i class="fa-solid fa-download mr-2"></i> CSV
+                </button>
+                <a href="/admin/create" class="btn-primary px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-slate-200">
+                    + Nouveau Commerce
+                </a>
+                <button onclick="logout()" class="btn-logout px-6 py-3 font-bold text-xs uppercase tracking-widest shadow-sm">
+                    <i class="fa-solid fa-power-off mr-2"></i> Quitter
+                </button>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            <div class="card-stats p-6">
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Enseignes Actives</p>
+                <span class="text-3xl font-black text-slate-900">{{totalCommerces}}</span>
+            </div>
+            <div class="card-stats p-6">
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Revenu Mensuel</p>
+                <span class="text-3xl font-black text-indigo-600">{{revenuTotal}}</span>
+            </div>
+            <div class="card-stats p-6">
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Statut Plateforme</p>
+                <div class="flex items-center gap-2 mt-1">
+                    <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span class="text-xs font-bold uppercase text-slate-700">Opérationnel</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="search-bar mb-8 flex items-center px-5 py-1">
+            <i class="fa-solid fa-magnifying-glass text-slate-300 mr-4"></i>
+            <input type="text" id="searchInput" onkeyup="filterTable()" 
+                placeholder="Rechercher une enseigne, un gérant ou un email..." 
+                class="w-full py-4 text-sm font-semibold outline-none text-slate-700">
+        </div>
+
+        <div class="table-container shadow-sm">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left" id="partners-table">
+                    <thead class="bg-slate-50 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">
+                        <tr>
+                            <th class="p-6">Enseigne & Gérant</th>
+                            <th class="p-6">Contact / Email</th>
+                            <th class="p-6 text-center">Status</th>
+                            <th class="p-6 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 text-sm" id="tableBody">
+                        {{listCommerçants}}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <input type="hidden" id="raw-data" value="{{rawJsonData}}">
+
+    <script>
+        function filterTable() {
+            const filter = document.getElementById("searchInput").value.toLowerCase();
+            const rows = document.getElementById("tableBody").getElementsByTagName("tr");
+            for (let row of rows) {
+                row.style.display = (row.textContent.toLowerCase().includes(filter)) ? "" : "none";
+            }
+        }
+
+        // FONCTION DE DECONNEXION
+        function logout() {
+            if (confirm("Voulez-vous vraiment fermer la session Master ?")) {
+                window.location.href = '/admin/login';
+            }
+        }
+
+        async function validerPaiement(id, nom) {
+            if (confirm(`Confirmer que le commerce "${nom}" a bien payé son abonnement ?`)) {
+                const urlParams = new URLSearchParams(window.location.search);
+                const token = urlParams.get('auth');
+
+                const response = await fetch(`/api/valider-paiement/${id}`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    alert("Abonnement activé !");
+                    location.reload();
+                }
+            }
+        }
+
+        function exportToCSV() {
+            try {
+                const rawData = decodeURIComponent(document.getElementById('raw-data').value);
+                const data = JSON.parse(rawData);
+                if (!data.length) return alert("Vide");
+                const headers = Object.keys(data[0]).join(",");
+                const csv = [headers, ...data.map(row => Object.values(row).map(v => `"${v}"`).join(","))].join("\n");
+                const link = document.createElement("a");
+                link.href = "data:text/csv;charset=utf-8," + encodeURI(csv);
+                link.download = "commercants.csv";
+                link.click();
+            } catch(e) { console.error(e); }
+        }
+
+        async function deleteBusiness(id, name) {
+            if (confirm(`⚠️ ATTENTION : Es-tu sûr de vouloir supprimer définitivement "${name}" ?\n\nCette action supprimera le commerce, ses clients et son accès de connexion.`)) {
+                
+                const urlParams = new URLSearchParams(window.location.search);
+                const token = urlParams.get('auth');
+
+                try {
+                    const response = await fetch(`/api/supprimer-commerce/${id}`, {
+                        method: 'POST',
+                        headers: { 
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+
+                    const result = await response.json();
+                    if (result.success) {
+                        alert(result.message);
+                        location.reload();
+                    } else {
+                        alert("Erreur : " + result.message);
+                    }
+                } catch (err) {
+                    alert("Erreur lors de la communication avec le serveur.");
+                }
+            }
+        }
+    </script>
+</body>
+</html>

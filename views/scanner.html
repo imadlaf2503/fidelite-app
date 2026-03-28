@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scanner | {{nom}}</title>
+    <script src="https://unpkg.com/@zxing/library@latest"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background-color: #000000; font-family: 'Inter', sans-serif; }
+        .scanner-overlay { border: 2px solid rgba(255,255,255,0.05); box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.85); }
+        .scan-line { animation: scan 2s infinite linear; position: absolute; width: 100%; height: 2px; background: #6366f1; box-shadow: 0 0 15px #6366f1; }
+        @keyframes scan { 0% { top: 0%; } 100% { top: 100%; } }
+        .flash-success { animation: flash 0.4s ease-out; }
+        @keyframes flash { 0% { background: #22c55e; } 100% { background: transparent; } }
+    </style>
+</head>
+<body class="flex flex-col items-center min-h-screen p-4 overflow-x-hidden">
+    <audio id="beepAudio" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
+
+    <div id="overlay-start" class="fixed inset-0 bg-black z-50 flex flex-col items-center justify-center p-8 text-center">
+        <img src="{{logo_url}}" class="w-24 h-24 object-contain mb-6 rounded-3xl bg-white p-3 shadow-2xl" alt="Logo">
+        <h2 class="text-white text-2xl font-black uppercase tracking-tighter mb-2">{{nom}}</h2>
+        <button id="unlockBtn" class="bg-indigo-600 text-white font-black py-5 px-14 rounded-full shadow-2xl uppercase tracking-widest text-sm">Activer le Scanner</button>
+    </div>
+
+    <header class="w-full max-w-md flex items-center justify-between mt-4 mb-10 px-2">
+        <div class="flex items-center gap-3">
+            <img src="{{logo_url}}" class="w-10 h-10 object-contain rounded-xl bg-white p-1" alt="Logo">
+            <h1 class="text-white font-black text-sm uppercase leading-none tracking-tight">{{nom}}</h1>
+        </div>
+        <button onclick="window.location.href='/dashboard/{{slug}}?auth='+new URLSearchParams(window.location.search).get('auth')" class="w-10 h-10 rounded-full bg-slate-900 flex items-center justify-center text-slate-400 hover:text-white border border-slate-800 transition">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </header>
+
+    <div id="camera-container" class="relative w-72 h-72 rounded-[3.5rem] overflow-hidden border-2 border-indigo-600/20 shadow-2xl">
+        <video id="video" class="w-full h-full object-cover"></video>
+        <div class="absolute inset-0 scanner-overlay"><div class="scan-line"></div></div>
+    </div>
+
+    <div class="w-full max-w-xs mt-10 mb-8">
+        <div id="status-card" class="bg-slate-900/80 border border-slate-800 p-4 rounded-3xl text-center shadow-lg">
+            <div id="status-text" class="text-[10px] font-black text-slate-500 uppercase tracking-widest">En attente de détection...</div>
+        </div>
+    </div>
+
+    <div id="history-list" class="w-full max-w-sm mt-auto mb-6 flex flex-col gap-2"></div>
+
+    <script>
+        const codeReader = new ZXing.BrowserQRCodeReader();
+        const beep = document.getElementById('beepAudio');
+        const unlockBtn = document.getElementById('unlockBtn');
+        const overlay = document.getElementById('overlay-start');
+        const statusText = document.getElementById('status-text');
+        const historyList = document.getElementById('history-list');
+        const cameraBox = document.getElementById('camera-container');
+        
+        let isScanning = true;
+        const slug = window.location.pathname.split('/').pop();
+
+        unlockBtn.addEventListener('click', () => {
+            overlay.remove();
+            startScanner();
+        });
+
+        function processScanResult(customerId) {
+            if (!isScanning) return;
+            isScanning = false;
+            beep.play();
+            cameraBox.classList.add('flash-success');
+            setTimeout(() => cameraBox.classList.remove('flash-success'), 400);
+
+            const token = new URLSearchParams(window.location.search).get('auth');
+
+            fetch(`/api/add-points/${slug}`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}` 
+                },
+                body: JSON.stringify({ customerId: customerId })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    statusText.innerHTML = `<span class="text-green-500">SUCCÈS : ${data.customerName.toUpperCase()}</span>`;
+                } else {
+                    statusText.innerHTML = `<span class="text-red-500">REFUSÉ</span>`;
+                }
+                setTimeout(() => { isScanning = true; statusText.innerText = "Prêt"; }, 2000);
+            });
+        }
+
+        function startScanner() {
+            codeReader.decodeFromVideoDevice(null, 'video', (result) => {
+                if (result && isScanning) processScanResult(result.text);
+            }).catch(() => { statusText.innerText = "MODE LASER ACTIF"; });
+        }
+    </script>
+</body>
+</html>

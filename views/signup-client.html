@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inscription - {{nom}}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background-color: #f8fafc; }
+        .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+
+    <div class="max-w-md w-full space-y-8 glass p-10 rounded-3xl shadow-xl border border-white">
+        <div class="text-center">
+            <img src="{{logo_url}}" alt="Logo {{nom}}" class="mx-auto h-20 w-auto mb-4 object-contain">
+            <h2 class="text-3xl font-black text-slate-900 tracking-tight">Bienvenue chez {{nom}}</h2>
+            <p class="mt-2 text-sm text-slate-500 font-medium">Rejoignez notre programme de fidélité en quelques secondes.</p>
+        </div>
+
+        <form action="/api/register-customer/{{slug}}" method="POST" class="mt-8 space-y-5">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Prénom</label>
+                    <input type="text" name="prenom" required placeholder="Jean" 
+                           class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Nom</label>
+                    <input type="text" name="nom" required placeholder="Dupont" 
+                           class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Adresse Email</label>
+                <input type="email" name="email" required placeholder="jean@email.com" 
+                       class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Numéro de Téléphone</label>
+                <input type="tel" name="telephone" required placeholder="06 12 34 56 78" 
+                       class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+            </div>
+
+            <button type="submit" 
+                    class="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold hover:bg-slate-800 transform transition active:scale-[0.98] shadow-lg shadow-slate-200">
+                Obtenir ma carte de fidélité
+            </button>
+        </form>
+
+        <div class="text-center mt-6">
+            <p class="text-[10px] text-slate-400">En vous inscrivant, vous acceptez de recevoir vos points de fidélité chez {{nom}}.</p>
+        </div>
+    </div>
+
+</body>
+</html>

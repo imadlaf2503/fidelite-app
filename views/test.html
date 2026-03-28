@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SaaS Master | Inventaire & Stats</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #020617; color: white; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); }
+        .status-paid { background: rgba(34, 197, 94, 0.1); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.2); }
+        .status-pending { background: rgba(234, 179, 8, 0.1); color: #eab308; border: 1px solid rgba(234, 179, 8, 0.2); }
+    </style>
+</head>
+<body class="min-h-screen p-6 md:p-12">
+
+    <div class="max-w-7xl mx-auto">
+        
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-6">
+            <div>
+                <h1 class="text-3xl font-black tracking-tighter italic">DASHBOARD <span class="text-indigo-500">OVERVIEW</span></h1>
+                <p class="text-slate-500 text-sm font-bold uppercase tracking-widest mt-1">Analyse globale de votre écosystème SaaS</p>
+            </div>
+            <a href="/super-admin" class="bg-indigo-600 hover:bg-indigo-500 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition shadow-lg shadow-indigo-500/20">
+                + Nouveau Commerce
+            </a>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+            <div class="glass p-6 rounded-[2rem]">
+                <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Commerçants Totaux</p>
+                <div class="flex items-end gap-2">
+                    <span class="text-4xl font-black text-white">12</span>
+                    <span class="text-emerald-500 text-xs font-bold mb-1"><i class="fa-solid fa-arrow-up"></i> 8%</span>
+                </div>
+            </div>
+            <div class="glass p-6 rounded-[2rem]">
+                <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Chiffre d'Affaire (Mensuel)</p>
+                <div class="flex items-end gap-2">
+                    <span class="text-4xl font-black text-white">588€</span>
+                    <span class="text-slate-500 text-xs font-bold mb-1">49€ / commerce</span>
+                </div>
+            </div>
+            <div class="glass p-6 rounded-[2rem]">
+                <p class="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2">Abonnements Actifs</p>
+                <div class="flex items-end gap-2">
+                    <span class="text-4xl font-black text-white">10</span>
+                    <span class="text-yellow-500 text-[10px] font-bold mb-1">2 en attente</span>
+                </div>
+            </div>
+            <div class="glass p-6 rounded-[2rem]">
+                <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Utilisateurs Finaux</p>
+                <div class="flex items-end gap-2">
+                    <span class="text-4xl font-black text-white">2.4k</span>
+                    <span class="text-indigo-500 text-[10px] font-bold mb-1">Cartes générées</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="glass rounded-[2.5rem] overflow-hidden">
+            <div class="p-8 border-b border-white/5 flex justify-between items-center">
+                <h2 class="font-black text-xl italic uppercase tracking-tighter">Liste des Partenaires</h2>
+                <div class="flex gap-2">
+                    <input type="text" placeholder="Filtrer..." class="bg-slate-800 border-none text-xs p-2 px-4 rounded-xl outline-none focus:ring-1 ring-indigo-500">
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead class="bg-slate-900/50 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
+                        <tr>
+                            <th class="p-6">Enseigne / Gérant</th>
+                            <th class="p-6">Contact B2B</th>
+                            <th class="p-6 text-center">Date Création</th>
+                            <th class="p-6 text-center">Status Paiement</th>
+                            <th class="p-6 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-white/5 text-sm">
+                        <tr class="hover:bg-white/[0.02] transition">
+                            <td class="p-6">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center font-black">B</div>
+                                    <div>
+                                        <div class="font-black text-white">Bun's Burger</div>
+                                        <div class="text-[10px] text-slate-500">ID: #88291</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="p-6">
+                                <div class="font-bold">Jean Dupont</div>
+                                <div class="text-[11px] text-slate-500 italic">jean@burger.fr | 06.01.02.03.04</div>
+                            </td>
+                            <td class="p-6 text-center font-mono text-xs text-slate-400">12 Mars 2024</td>
+                            <td class="p-6 text-center">
+                                <span class="status-paid px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Payé</span>
+                            </td>
+                            <td class="p-6 text-right">
+                                <div class="flex justify-end gap-2">
+                                    <button class="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center hover:text-indigo-400 transition"><i class="fa-solid fa-pen-to-square"></i></button>
+                                    <button class="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center hover:text-red-400 transition"><i class="fa-solid fa-trash"></i></button>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <tr class="hover:bg-white/[0.02] transition">
+                            <td class="p-6">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-xl bg-pink-600 flex items-center justify-center font-black">S</div>
+                                    <div>
+                                        <div class="font-black text-white">Studio Barber</div>
+                                        <div class="text-[10px] text-slate-500">ID: #88295</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="p-6">
+                                <div class="font-bold">Marco Laville</div>
+                                <div class="text-[11px] text-slate-500 italic">contact@studio.com | 06.88.99.11.22</div>
+                            </td>
+                            <td class="p-6 text-center font-mono text-xs text-slate-400">15 Mars 2024</td>
+                            <td class="p-6 text-center">
+                                <span class="status-pending px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">En Attente</span>
+                            </td>
+                            <td class="p-6 text-right">
+                                <div class="flex justify-end gap-2">
+                                    <button class="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center hover:text-indigo-400 transition"><i class="fa-solid fa-pen-to-square"></i></button>
+                                    <button class="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center hover:text-red-400 transition"><i class="fa-solid fa-trash"></i></button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <footer class="mt-12 text-center">
+            <p class="text-slate-600 text-[10px] font-bold uppercase tracking-[0.3em]">Propulsé par LoyaltyPro Engine v5.0 — Système Multi-Tenant</p>
+        </footer>
+    </div>
+
+</body>
+</html>
+
+
+require('dotenv').config();
+const express = require('express');
+const { createClient } = require('@supabase/supabase-js');
+const fs = require('fs');
+const path = require('path');
+const multer = require('multer');
+
+const app = express();
+const upload = multer({ storage: multer.memoryStorage() });
+
+// Configuration Express
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static('public'));
+
+// --- CONNEXION SUPABASE ---
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+
+// Système de Logs
+async function logAction(type, message, meta = {}) {
+    await supabase.from('system_logs').insert([{
+        action_type: type,
+        message: message,
+        metadata: meta
+    }]);
+}
+
+// --- MOTEUR DE RENDU ---
+function render(viewName, variables = {}) {
+    const filePath = path.join(__dirname, 'views', viewName);
+    if (!fs.existsSync(filePath)) return `Erreur : La vue ${viewName} est introuvable.`;
+    
+    let template = fs.readFileSync(filePath, 'utf8');
+    
+    // ÉTAPE 1 : On injecte d'abord le HTML et CSS custom
+    // Cela permet aux variables comme {{nom}} d'apparaître dans le template final
+    if (variables.html_custom) {
+        template = template.replace(new RegExp('{{html_custom}}', 'g'), variables.html_custom);
+    }
+    if (variables.css_custom) {
+        template = template.replace(new RegExp('{{css_custom}}', 'g'), variables.css_custom);
+    }
+
+    // ÉTAPE 2 : On remplace TOUTES les variables (nom, logo, etc.) 
+    // y compris celles qui viennent d'être injectées
+    Object.keys(variables).forEach(key => {
+        const value = variables[key] !== undefined ? variables[key] : '';
+        const regex = new RegExp(`{{\\s*${key}\\s*}}`, 'g');
+        template = template.replace(regex, value);
+    });
+    
+    return template;
+}
+
+// --- ROUTES ---
+
+// 1. PAGE INVENTAIRE (Avec Bouton Modifier)
+app.get('/admin/inventory', async (req, res) => {
+    try {
+        const { data: businesses, error } = await supabase
+            .from('business')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        const now = new Date();
+        const septJoursEnMs = 7 * 24 * 60 * 60 * 1000;
+
+        const rowsHtml = (businesses || []).map(b => {
+            const dernierScan = new Date(b.last_scan || b.created_at);
+            const estInactif = (now - dernierScan) > septJoursEnMs;
+            const alerteIcone = estInactif 
+                ? `<i class="fa-solid fa-circle-exclamation text-red-500 animate-pulse ml-2" title="Inactif depuis 7 jours"></i>` 
+                : `<i class="fa-solid fa-circle-check text-emerald-500 ml-2" title="Actif"></i>`;
+
+            return `
+            <tr class="hover:bg-white/[0.02] transition border-b border-white/5">
+                <td class="p-6">
+                    <div class="flex items-center font-bold text-white italic">
+                        ${b.nom} ${alerteIcone}
+                    </div>
+                    <span class="text-[10px] text-slate-500 uppercase">${b.gestionnaire_prenom} ${b.gestionnaire_nom}</span>
+                </td>
+                <td class="p-6 text-xs text-slate-400">
+                    ${b.gestionnaire_email}
+                </td>
+                <td class="p-6 text-center">
+                    <div class="font-bold text-indigo-400">${b.prix_mensuel || 0}€</div>
+                    <span class="${b.statut === 'payé' ? 'text-emerald-500' : 'text-amber-500'} text-[9px] font-black uppercase tracking-widest">
+                        ${b.statut || 'En attente'}
+                    </span>
+                </td>
+                <td class="p-6 text-right">
+                    <div class="flex justify-end gap-3 items-center">
+                        
+                        <a href="/admin/edit/${b.id}" class="text-slate-400 hover:text-amber-500 transition" title="Modifier le design">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                        </a>
+
+                        <form action="/api/toggle-maintenance/${b.id}" method="POST" class="inline">
+                            <input type="hidden" name="current_status" value="${b.is_active}">
+                            <button type="submit" class="transition ${b.is_active ? 'text-emerald-500' : 'text-red-500'}">
+                                <i class="fa-solid ${b.is_active ? 'fa-toggle-on' : 'fa-toggle-off'} text-xl"></i>
+                            </button>
+                        </form>
+
+                        <a href="/dashboard/${b.slug}" target="_blank" class="text-[10px] uppercase font-black tracking-widest bg-slate-800 hover:bg-slate-700 px-3 py-2 rounded-lg transition">
+                            <i class="fa-solid fa-eye"></i>
+                        </a>
+
+                        <button class="text-slate-600 hover:text-red-500 transition"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                </td>
+            </tr>`;
+        }).join('');
+
+        const csvData = JSON.stringify(businesses.map(b => ({ Nom: b.nom, Email: b.gestionnaire_email, Tel: b.gestionnaire_tel, Statut: b.statut, Prix: b.prix_mensuel })));
+
+        res.send(render('admin-inventory.html', { 
+            listCommerçants: rowsHtml,
+            totalCommerces: businesses.length,
+            revenuTotal: (businesses.filter(b => b.statut === 'payé').reduce((acc, b) => acc + (Number(b.prix_mensuel) || 0), 0)) + "€",
+            abonnementsActifs: businesses.filter(b => b.statut === 'payé').length,
+            rawJsonData: encodeURIComponent(csvData)
+        }));
+    } catch (err) { res.status(500).send("Erreur : " + err.message); }
+});
+
+// 2. PAGE DE CRÉATION (Valeurs par défaut vides)
+app.get('/admin/create', (req, res) => {
+    res.send(render('super-admin.html', {
+        formTitle: "CRÉER UN NOUVEAU COMMERCE",
+        formAction: "/api/creer-commerce",
+        submitText: "Créer et Déployer",
+        nom: "", slug: "", g_prenom: "", g_nom: "", g_email: "", g_tel: "", prix: "49", couleur: "#6366f1", logo_url: "",
+        dash_html: '<div class="p-6">\n    <img id="logo-dash" class="logo-custom mb-4">\n    <h3 class="font-bold text-lg">Espace Scanner</h3>\n</div>',
+        dash_css: '.dash-view { background: #ffffff; color: #0f172a; }\n.logo-custom { width: 50px; height: 50px; object-fit: contain; }\n.pc-nav { height: 50px; display: flex; align-items: center; padding: 0 20px; color: white; }',
+        card_html: '<div class="p-6 text-center">\n    <img id="logo-card" class="logo-card-custom mx-auto mb-2">\n    <div class="text-4xl font-black mb-4">120 <span class="text-sm">PTS</span></div>\n</div>',
+        card_css: '.card-view { background: #f8fafc; border-radius: 25px; margin: 15px; height: 90%; color: #1e293b; }\n.logo-card-custom { width: 80px; }'
+    }));
+});
+
+// 3. PAGE DE MODIFICATION (Pré-remplie)
+app.get('/admin/edit/:id', async (req, res) => {
+    try {
+        const { data: b } = await supabase.from('business').select('*').eq('id', req.params.id).single();
+        if (!b) return res.redirect('/admin/inventory');
+
+        res.send(render('super-admin.html', {
+            formTitle: `MODIFIER : ${b.nom}`,
+            formAction: `/api/modifier-commerce/${b.id}`,
+            submitText: "Sauvegarder les modifications",
+            nom: b.nom, slug: b.slug, g_prenom: b.gestionnaire_prenom, g_nom: b.gestionnaire_nom,
+            g_email: b.gestionnaire_email, g_tel: b.gestionnaire_tel, prix: b.prix_mensuel,
+            couleur: b.config_design.couleur, logo_url: b.config_design.logo_url,
+            dash_html: b.config_design.dash_html, dash_css: b.config_design.dash_css,
+            card_html: b.config_design.card_html, card_css: b.config_design.card_css
+        }));
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+// 4. API DE CRÉATION
+app.post('/api/creer-commerce', upload.single('logo_file'), async (req, res) => {
+    try {
+        const body = req.body;
+        let publicUrl = "";
+        if (req.file) {
+            const fileName = `${Date.now()}-${body.slug}.${req.file.originalname.split('.').pop()}`;
+            await supabase.storage.from('logos').upload(`uploads/${fileName}`, req.file.buffer, { contentType: req.file.mimetype });
+            publicUrl = supabase.storage.from('logos').getPublicUrl(`uploads/${fileName}`).data.publicUrl;
+        }
+        await supabase.from('business').insert([{
+            nom: body.nom, slug: body.slug, gestionnaire_prenom: body.g_prenom, gestionnaire_nom: body.g_nom,
+            gestionnaire_email: body.g_email, gestionnaire_tel: body.g_tel, prix_mensuel: body.prix_mensuel,
+            statut: body.statut, is_active: true,
+            config_design: { couleur: body.couleur, logo_url: publicUrl, dash_html: body.dash_html, dash_css: body.dash_css, card_html: body.card_html, card_css: body.card_css }
+        }]);
+        await logAction('CREATE', `Nouveau commerce : ${body.nom}`);
+        res.redirect('/admin/inventory');
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+// 5. API DE MODIFICATION
+app.post('/api/modifier-commerce/:id', upload.single('logo_file'), async (req, res) => {
+    try {
+        const { id } = req.params;
+        const body = req.body;
+        const { data: old } = await supabase.from('business').select('config_design').eq('id', id).single();
+        let publicUrl = old.config_design.logo_url;
+
+        if (req.file) {
+            const fileName = `${Date.now()}-${body.slug}.${req.file.originalname.split('.').pop()}`;
+            await supabase.storage.from('logos').upload(`uploads/${fileName}`, req.file.buffer);
+            publicUrl = supabase.storage.from('logos').getPublicUrl(`uploads/${fileName}`).data.publicUrl;
+        }
+
+        await supabase.from('business').update({
+            nom: body.nom, prix_mensuel: body.prix_mensuel, statut: body.statut,
+            config_design: { couleur: body.couleur, logo_url: publicUrl, dash_html: body.dash_html, dash_css: body.dash_css, card_html: body.card_html, card_css: body.card_css }
+        }).eq('id', id);
+
+        await logAction('UPDATE', `Modification design : ${body.nom}`);
+        res.redirect('/admin/inventory');
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+// --- NOUVELLE ROUTE : DASHBOARD CLIENT AVEC BLOCAGE ---
+app.get('/dashboard/:slug', async (req, res) => {
+    try {
+        const { slug } = req.params;
+        console.log("Recherche du slug :", slug); // DEBUG : Regarde ton terminal
+
+        const { data: b, error } = await supabase
+            .from('business')
+            .select('*')
+            .eq('slug', slug)
+            .maybeSingle(); // Utilise maybeSingle pour éviter les erreurs si vide
+
+        if (error) {
+            console.error("Erreur Supabase :", error);
+            return res.status(500).send("Erreur BDD : " + error.message);
+        }
+
+        if (!b) {
+            return res.status(404).send(`Commerçant introuvable pour le slug : "${slug}". Vérifiez votre base de données.`);
+        }
+
+        // VERIFICATION DE L'ACCÈS
+        if (b.is_active === false) {
+            return res.send(`
+                <body style="background:#020617; color:white; font-family:sans-serif; display:flex; align-items:center; justify-content:center; height:100vh; margin:0;">
+                    <div style="text-align:center; border: 1px solid #1e293b; padding: 50px; border-radius: 30px; background:#0f172a;">
+                        <h1>ACCÈS RESTREINT</h1>
+                        <p>Le tableau de bord de ${b.nom} est suspendu.</p>
+                    </div>
+                </body>
+            `);
+        }
+
+        // DANS SERVER.JS (Route /dashboard/:slug)
+        // CHERCHE CE BLOC DANS TON SERVER.JS ET METS-LE À JOUR
+        res.send(render('client-dashboard.html', { 
+            nom: b.nom, // Remplace {{nom}}
+            logo_url: b.config_design.logo_url, // Remplace {{logo_url}}
+            prix_mensuel: b.prix_mensuel, // Remplace {{prix_mensuel}}
+            html_custom: b.config_design.dash_html, // Remplace {{html_custom}}
+            css_custom: b.config_design.dash_css // Remplace {{css_custom}}
+        }));
+    } catch (err) { 
+        res.status(500).send("Erreur Serveur : " + err.message); 
+    }
+});
+
+// Routes Toggle Maintenance & Logs
+app.post('/api/toggle-maintenance/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const currentStatus = req.body.current_status === 'true';
+        await supabase.from('business').update({ is_active: !currentStatus }).eq('id', id);
+        res.redirect('/admin/inventory');
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+app.get('/admin/logs', async (req, res) => {
+    const { data: logs } = await supabase.from('system_logs').select('*').order('created_at', { ascending: false }).limit(50);
+    const logsHtml = (logs || []).map(l => `
+        <div class="flex gap-4 p-4 border-b border-white/5 text-[10px] items-center">
+            <span class="text-slate-500 font-mono">${new Date(l.created_at).toLocaleString()}</span>
+            <span class="font-black text-indigo-500 uppercase tracking-widest">[${l.action_type}]</span>
+            <span class="text-slate-300">${l.message}</span>
+        </div>
+    `).join('');
+    res.send(render('admin-logs.html', { content: logsHtml }));
+});
+
+app.get('/', (req, res) => res.redirect('/admin/inventory'));
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`🚀 Serveur : http://localhost:${PORT}`));

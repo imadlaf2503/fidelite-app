@@ -1,0 +1,752 @@
+require('dotenv').config();
+const express = require('express');
+const { createClient } = require('@supabase/supabase-js');
+const fs = require('fs');
+const path = require('path');
+const multer = require('multer');
+
+const app = express();
+const upload = multer({ storage: multer.memoryStorage() });
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static('public'));
+
+// Utilise bien la clé SERVICE_ROLE pour le serveur
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE);
+
+// --- NOUVEAU : MIDDLEWARE DE SÉCURITÉ ---
+const checkAuth = async (req, res, next) => {
+    try {
+        const authHeader = req.headers.authorization;
+        if (!authHeader) return res.status(401).json({ error: "Non connecté" });
+
+        const token = authHeader.split(' ')[1]; 
+        const { data: { user }, error } = await supabase.auth.getUser(token);
+
+        if (error || !user) throw new Error("Session expirée");
+
+        req.user = user; 
+        next();
+    } catch (e) {
+        res.status(401).json({ error: "Accès refusé" });
+    }
+};
+
+// --- MOTEUR DE RENDU ---
+function render(viewName, variables = {}) {
+    const filePath = path.join(__dirname, 'views', viewName);
+    if (!fs.existsSync(filePath)) return `Erreur : ${viewName} introuvable.`;
+    let template = fs.readFileSync(filePath, 'utf8');
+    if (variables.card_html) template = template.replace(/{{card_html}}/g, variables.card_html);
+    if (variables.card_css) template = template.replace(/{{card_css}}/g, variables.card_css);
+    for (let i = 0; i < 2; i++) {
+        Object.keys(variables).forEach(key => {
+            const value = variables[key] !== undefined ? variables[key] : '';
+            const regex = new RegExp(`{{\\s*${key}\\s*}}`, 'g');
+            template = template.replace(regex, value);
+        });
+    }
+    return template;
+}
+
+// --- SYSTÈME DE LOGS ---
+async function logAction(type, message, meta = {}) {
+    try {
+        await supabase.from('system_logs').insert([{
+            action_type: type, message: message, metadata: meta
+        }]);
+    } catch (e) { console.error("Erreur Log:", e); }
+}
+
+// --- ROUTES ADMIN ---
+app.get('/admin/inventory', async (req, res) => {
+    try {
+        // 1. RÉCUPÉRATION DU TOKEN DANS L'URL
+        const token = req.query.auth;
+        const ADMIN_EMAIL = 'lafendiabdallahimad@gmail.com'; // <--- TON EMAIL MASTER
+
+        // 2. SÉCURITÉ : SI PAS DE TOKEN, RETOUR AU LOGIN
+        if (!token) {
+            return res.redirect('/admin/login');
+        }
+
+        // 3. VÉRIFICATION DU TOKEN AVEC SUPABASE
+        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+        if (authError || !user || user.email !== ADMIN_EMAIL) {
+            console.log("Tentative d'accès non autorisée à l'inventaire");
+            return res.redirect('/admin/login?error=unauthorized');
+        }
+
+        // 4. RÉCUPÉRATION DES DONNÉES (Si authentifié)
+        const { data: businesses, error: dbError } = await supabase
+            .from('business')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (dbError) throw dbError;
+        
+        // 5. GÉNÉRATION DU TABLEAU HTML
+        const rowsHtml = (businesses || []).map(b => {
+            const statusIcon = b.is_active 
+                ? `<i class="fa-solid fa-toggle-on text-lg text-indigo-600"></i>` 
+                : `<i class="fa-solid fa-toggle-off text-lg text-red-500 animate-pulse"></i>`;
+            
+            const actuelStatut = (b.statut || '').toLowerCase();
+            
+            // Le bouton Check Vert n'apparaît que si le statut n'est pas "payé"
+            const payBtn = actuelStatut !== 'payé' ? 
+                `<button onclick="validerPaiement('${b.id}', '${b.nom.replace(/'/g, "\\'")}')" class="w-8 h-8 flex items-center justify-center rounded-lg bg-green-50 text-green-600 hover:bg-green-600 hover:text-white transition shadow-sm border border-green-100" title="Valider le paiement">
+                    <i class="fa-solid fa-check text-xs"></i>
+                </button>` : '';
+
+            return `<tr class="hover:bg-slate-50/50 transition border-b border-slate-50">
+                <td class="p-6">
+                    <div class="flex items-center gap-2">
+                        <div class="font-extrabold text-slate-900 text-base">${b.nom}</div>
+                        ${!b.is_active ? '<span class="bg-red-100 text-red-600 text-[8px] font-black px-2 py-0.5 rounded-full uppercase">Maintenance</span>' : ''}
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-[10px] text-slate-400 font-bold uppercase">${b.gestionnaire_prenom} ${b.gestionnaire_nom}</span>
+                        <span class="text-[10px] text-indigo-500 font-black tracking-widest uppercase">ID: ${b.password || '----'}</span>
+                    </div>
+                </td>
+                <td class="p-6 text-xs font-semibold text-slate-600">${b.gestionnaire_email}</td>
+                <td class="p-6 text-center">
+                    <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${actuelStatut === 'payé' ? 'bg-green-50 text-green-600' : 'bg-amber-50 text-amber-600'}">
+                        ${b.statut || 'En attente'}
+                    </span>
+                </td>
+                <td class="p-6 text-right">
+                    <div class="flex justify-end gap-3 items-center">
+                        ${payBtn} 
+                        <form action="/api/toggle-maintenance/${b.id}?auth=${token}" method="POST" class="inline">
+                            <button type="submit" class="w-8 h-8 flex items-center justify-center rounded-lg transition ${b.is_active ? 'bg-slate-100 text-slate-400' : 'bg-red-50 text-red-500'}">
+                                ${statusIcon}
+                            </button>
+                        </form>
+                        <a href="/admin/edit/${b.id}?auth=${token}" class="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-100 text-slate-500 hover:bg-indigo-600 hover:text-white transition shadow-sm">
+                            <i class="fa-solid fa-pen text-xs"></i>
+                        </a>
+                        <a href="/dashboard/${b.slug}?auth=${token}" target="_blank" class="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-900 text-white hover:bg-slate-700 transition shadow-sm">
+                            <i class="fa-solid fa-eye text-xs"></i>
+                        </a>
+                        <button onclick="deleteBusiness('${b.id}', '${b.nom.replace(/'/g, "\\'")}')" class="w-8 h-8 flex items-center justify-center rounded-lg bg-red-50 text-red-500 hover:bg-red-600 hover:text-white transition shadow-sm border border-red-100">
+                            <i class="fa-solid fa-trash-can text-xs"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>`;
+        }).join('');
+
+        // 6. CALCULS DES STATS
+        const totalRevenu = businesses
+            .filter(b => (b.statut || '').toLowerCase() === 'payé')
+            .reduce((acc, b) => acc + (Number(b.prix_mensuel) || 0), 0);
+        
+        const rawJsonData = JSON.stringify(businesses.map(b => ({ id: b.id, nom: b.nom, email: b.gestionnaire_email, statut: b.statut })));
+
+        res.send(render('admin-inventory.html', { 
+            listCommerçants: rowsHtml, 
+            totalCommerces: businesses.length, 
+            revenuTotal: totalRevenu + "€", 
+            abonnementsActifs: businesses.filter(b => b.is_active).length, 
+            rawJsonData: encodeURIComponent(rawJsonData),
+            auth_token: token // On renvoie le token pour le réutiliser dans les liens
+        }));
+
+    } catch (err) { 
+        console.error(err);
+        res.status(500).send("Erreur lors du chargement de l'inventaire : " + err.message); 
+    }
+});
+
+app.get('/admin/create', (req, res) => {
+    res.send(render('super-admin.html', { formTitle: "Nouveau Commerce", formAction: "/api/creer-commerce", submitText: "Déployer le commerce", nom: "", slug: "", g_prenom: "", g_nom: "", g_email: "", g_tel: "", prix: "49", couleur: "#6366f1", password: "", points_per_euro: "1", logic_type: "reset", points_thresholds: "10:Café offert, 20:Sandwich offert", card_html: `<div class="card-content">\n  <img src="{{logo_url}}" class="logo">\n  <h2>{{prenom_client}}</h2>\n  <div class="pts">{{points}} PTS</div>\n</div>`, card_css: `.card-view { padding: 20px; text-align: center; }\n.pts { font-size: 40px; font-weight: 900; }` }));
+});
+
+app.get('/admin/edit/:id', async (req, res) => {
+    try {
+        const { data: b } = await supabase.from('business').select('*').eq('id', req.params.id).single();
+        res.send(render('super-admin.html', { formTitle: `Modifier ${b.nom}`, formAction: `/api/modifier-commerce/${b.id}`, submitText: "Mettre à jour", nom: b.nom, slug: b.slug, g_prenom: b.gestionnaire_prenom, g_nom: b.gestionnaire_nom, g_email: b.gestionnaire_email, g_tel: b.gestionnaire_tel, prix: b.prix_mensuel, password: b.password || "", couleur: b.config_design.couleur, logo_url: b.config_design.logo_url, points_per_euro: b.points_per_euro, logic_type: b.logic_type, points_thresholds: b.points_thresholds, card_html: b.config_design.card_html, card_css: b.config_design.card_css }));
+    } catch (err) { res.redirect('/admin/inventory'); }
+});
+
+// --- API DE SAUVEGARDE ---
+app.post('/api/creer-commerce', upload.single('logo_file'), async (req, res) => {
+    try {
+        const body = req.body;
+        let publicUrl = "";
+
+        // 1. Gestion du logo (Ton code existant)
+        if (req.file) {
+            const fileName = `${Date.now()}-${body.slug}.${req.file.originalname.split('.').pop()}`;
+            await supabase.storage.from('logos').upload(`uploads/${fileName}`, req.file.buffer, { contentType: req.file.mimetype });
+            publicUrl = supabase.storage.from('logos').getPublicUrl(`uploads/${fileName}`).data.publicUrl;
+        }
+
+        // 2. AUTOMATISATION : Création du compte de connexion dans Supabase Auth
+        // On utilise auth.admin pour forcer la création sans email de confirmation
+        const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+            email: body.g_email,
+            password: body.password, // Le mot de passe saisi dans ton formulaire
+            email_confirm: true,     // On confirme l'email automatiquement
+            user_metadata: { business_slug: body.slug }
+        });
+
+        if (authError) {
+            console.error("Erreur Auth:", authError.message);
+            // On continue quand même si l'utilisateur existe déjà, ou on peut stopper ici
+        }
+
+        // 3. Création du commerce dans la table business (Ton code existant)
+        await supabase.from('business').insert([{ 
+            nom: body.nom, 
+            slug: body.slug, 
+            gestionnaire_prenom: body.g_prenom, 
+            gestionnaire_nom: body.g_nom, 
+            gestionnaire_email: body.g_email, 
+            gestionnaire_tel: body.g_tel, 
+            prix_mensuel: body.prix_mensuel, 
+            statut: body.statut, 
+            is_active: true, 
+            password: body.password, 
+            points_per_euro: body.points_per_euro, 
+            logic_type: body.logic_type, 
+            points_thresholds: body.points_thresholds, 
+            config_design: { 
+                couleur: body.couleur, 
+                logo_url: publicUrl, 
+                card_html: body.card_html, 
+                card_css: body.card_css 
+            } 
+        }]);
+
+        await logAction('CREATE', `Nouveau commerce et compte auth créés : ${body.nom}`);
+        res.redirect('/admin/inventory');
+
+    } catch (err) { 
+        console.error(err);
+        res.status(500).send("Erreur lors de la création : " + err.message); 
+    }
+});
+
+app.post('/api/modifier-commerce/:id', upload.single('logo_file'), async (req, res) => {
+    try {
+        const { id } = req.params;
+        const body = req.body;
+
+        // 1. Récupérer les anciennes infos pour le logo et l'ancien email
+        const { data: old } = await supabase.from('business').select('*').eq('id', id).single();
+        let publicUrl = old.config_design.logo_url;
+
+        // 2. Gestion du nouveau logo (si présent)
+        if (req.file) {
+            const fileName = `${Date.now()}-${body.slug}.${req.file.originalname.split('.').pop()}`;
+            await supabase.storage.from('logos').upload(`uploads/${fileName}`, req.file.buffer, { upsert: true });
+            publicUrl = supabase.storage.from('logos').getPublicUrl(`uploads/${fileName}`).data.publicUrl;
+        }
+
+        // 3. MISE À JOUR AUTH (AUTOMATIQUE)
+        // On cherche l'utilisateur par son ancien email pour modifier son compte
+        const { data: userList } = await supabase.auth.admin.listUsers();
+        const authUser = userList.users.find(u => u.email === old.gestionnaire_email);
+
+        if (authUser) {
+            await supabase.auth.admin.updateUserById(authUser.id, {
+                email: body.g_email,
+                password: body.password, // Met à jour le mot de passe de connexion
+                email_confirm: true
+            });
+        }
+
+        // 4. Mise à jour de la table business (Ton code existant)
+        await supabase.from('business').update({ 
+            nom: body.nom, 
+            gestionnaire_email: body.g_email, // On met à jour l'email aussi ici
+            prix_mensuel: body.prix_mensuel, 
+            statut: body.statut, 
+            password: body.password, 
+            points_per_euro: body.points_per_euro, 
+            logic_type: body.logic_type, 
+            points_thresholds: body.points_thresholds, 
+            config_design: { 
+                couleur: body.couleur, 
+                logo_url: publicUrl, 
+                card_html: body.card_html, 
+                card_css: body.card_css 
+            } 
+        }).eq('id', id);
+
+        await logAction('UPDATE', `Commerce et Auth mis à jour : ${body.nom}`);
+        res.redirect('/admin/inventory');
+
+    } catch (err) { 
+        console.error(err);
+        res.status(500).send("Erreur modification : " + err.message); 
+    }
+});
+// --- DASHBOARD COMMERÇANT ---
+
+app.get('/dashboard/:slug/login', async (req, res) => {
+    try {
+        const { data: b } = await supabase.from('business').select('*').eq('slug', req.params.slug).single();
+        if (!b || !b.is_active) return res.status(403).send("Accès impossible.");
+        res.send(render('login-dashboard.html', { nom: b.nom, logo_url: b.config_design.logo_url, slug: b.slug, supabase_url: process.env.SUPABASE_URL, supabase_key: process.env.SUPABASE_KEY }));
+    } catch (e) { res.status(404).send("Erreur"); }
+});
+
+// --- DASHBOARD SÉCURISÉ (ADMIN + COMMERÇANT) ---
+app.get('/dashboard/:slug', async (req, res) => {
+    try {
+        const { slug } = req.params;
+        const authToken = req.query.auth;
+        const ADMIN_EMAIL = 'lafendiabdallahimad@gmail.com'; // <--- TON EMAIL ADMIN
+
+        const { data: b } = await supabase.from('business').select('*').eq('slug', slug).single();
+        if (!b) return res.status(404).send("Commerce inconnu");
+
+        // 1. Si pas de token, on affiche la page de login du commerce
+        if (!authToken) {
+            return res.send(render('login-dashboard.html', { 
+                nom: b.nom, logo_url: b.config_design.logo_url, slug: b.slug, 
+                supabase_url: process.env.SUPABASE_URL, supabase_key: process.env.SUPABASE_KEY 
+            }));
+        }
+
+        // 2. Vérification du token Supabase
+        const { data: { user }, error: authError } = await supabase.auth.getUser(authToken);
+
+        // 3. Définition des rôles
+        const isOwner = user && user.email === b.gestionnaire_email;
+        const isAdmin = user && user.email === ADMIN_EMAIL;
+
+        // Sécurité de base : Authentification
+        if (authError || !user || (!isOwner && !isAdmin)) {
+            console.log(`Accès refusé pour ${user?.email} sur le slug ${slug}`);
+            return res.redirect(`/dashboard/${slug}?error=unauthorized`);
+        }
+
+        // --- NOUVEAU : SÉCURITÉ PAIEMENT ---
+        // On bloque l'accès si ce n'est pas payé, MAIS on laisse passer l'Admin
+        const estPaye = b.statut && b.statut.toLowerCase() === 'payé';
+        
+        if (!estPaye && !isAdmin) {
+            return res.status(403).send(`
+                <div style="font-family: 'Plus Jakarta Sans', sans-serif; text-align:center; padding:100px 20px; background:#f8fafc; min-height:100vh;">
+                    <div style="max-width:500px; margin:auto; background:white; padding:40px; border-radius:24px; border:1px solid #e2e8f0; shadow: 0 10px 15px -3px rgba(0,0,0,0.1);">
+                        <div style="color:#f59e0b; font-size:50px; margin-bottom:20px;"><i class="fa-solid fa-circle-exclamation"></i></div>
+                        <h1 style="color:#0f172a; font-weight:900; text-transform:uppercase; margin-bottom:10px;">Accès Restreint</h1>
+                        <p style="color:#64748b; font-size:14px; margin-bottom:30px;">
+                            Votre abonnement pour <b>${b.nom}</b> est actuellement en attente de paiement ou expiré. 
+                        </p>
+                        <div style="background:#f1f5f9; padding:15px; border-radius:12px; font-size:12px; color:#475569; margin-bottom:30px;">
+                            Veuillez contacter le support ou régler votre facture pour réactiver votre Dashboard.
+                        </div>
+                        <a href="/dashboard/${slug}/login" style="display:inline-block; background:#6366f1; color:white; padding:12px 25px; border-radius:10px; text-decoration:none; font-weight:bold; font-size:13px;">Retour à la connexion</a>
+                    </div>
+                </div>
+            `);
+        }
+        // ----------------------------------
+
+        // 4. Si OK (Payé ou Admin), on charge les données des clients
+        const { data: customers } = await supabase.from('customers').select('*').eq('business_id', b.id).order('created_at', { ascending: false });
+        
+        // On récupère le premier palier pour l'affichage (ex: 10)
+        const REWARD_THRESHOLD = parseInt(b.points_thresholds) || 10; 
+
+        const tableRows = (customers || []).map(c => {
+            const isReady = c.points >= REWARD_THRESHOLD;
+            return `<tr class="hover:bg-slate-50 transition">
+                <td class="p-4"><div style="font-weight: 800; color:#0f172a">${c.prenom} ${c.nom}</div></td>
+                <td class="p-4">${c.email}</td>
+                <td class="p-4"><span class="points-tag ${isReady ? 'reward-ready' : ''}">${c.points} PTS</span></td>
+                <td class="p-4" style="text-align: right;">
+                    <div style="display:flex; justify-content:flex-end; gap:15px; align-items:center;">
+                        ${isReady ? `<form action="/api/reset-points/${c.id}?auth=${authToken}" method="POST" style="margin:0"><button type="submit" class="btn-reset">Offrir</button></form>` : ''}
+                        <a href="/my-card/${c.id}" target="_blank" style="color: #6366f1; font-size:18px;"><i class="fa-solid fa-eye"></i></a>
+                    </div>
+                </td>
+            </tr>`;
+        }).join('');
+
+        res.send(render('dashboard-template.html', { 
+            business_id: b.id,  // <--- AJOUTE CETTE LIGNE ICI
+            nom: b.nom, 
+            logo_url: b.config_design.logo_url, 
+            slug: b.slug, 
+            listClients: tableRows, 
+            nbClients: customers.length, 
+            sommePoints: (customers || []).reduce((acc, c) => acc + (c.points || 0), 0),
+            auth_token: authToken ,
+            supabase_url: process.env.SUPABASE_URL ,// <--- AJOUTE ÇA
+            supabase_key: process.env.SUPABASE_KEY  // <--- AJOUTE ÇA
+        }));
+
+    } catch (e) { 
+        console.error(e);
+        res.status(500).send("Erreur serveur"); 
+    }
+});
+
+// --- SCANNER SÉCURISÉ (ADMIN + COMMERÇANT) ---
+app.get('/scanner/:slug', async (req, res) => {
+    try {
+        const { slug } = req.params;
+        const authToken = req.query.auth;
+        const ADMIN_EMAIL = 'lafendiabdallahimad@gmail.com'; 
+
+        const { data: b } = await supabase.from('business').select('*').eq('slug', slug).single();
+        if (!b) return res.status(404).send("Commerce inconnu");
+
+        const { data: { user }, error: authError } = await supabase.auth.getUser(authToken);
+
+        const isOwner = user && user.email === b.gestionnaire_email;
+        const isAdmin = user && user.email === ADMIN_EMAIL;
+
+        // 1. Sécurité d'identité
+        if (authError || !user || (!isOwner && !isAdmin)) {
+            return res.status(403).send("Accès refusé : Identité non reconnue.");
+        }
+
+        // 2. SÉCURITÉ PAIEMENT (Le blocage ici aussi)
+        const estPaye = b.statut && b.statut.toLowerCase() === 'payé';
+        if (!estPaye && !isAdmin) {
+            return res.status(403).send(`
+                <div style="font-family:sans-serif; text-align:center; padding:50px;">
+                    <h2 style="color:#ef4444;">Scanner Désactivé</h2>
+                    <p>Votre abonnement n'est pas à jour. Impossible de distribuer des points.</p>
+                </div>
+            `);
+        }
+
+        res.send(render('scanner.html', { 
+            nom: b.nom, 
+            slug: b.slug, 
+            logo_url: b.config_design.logo_url,
+            auth_token: authToken 
+        }));
+    } catch (err) { res.status(500).send("Erreur serveur"); }
+});
+
+app.post('/api/scan/:id', async (req, res) => {
+    try {
+        const { id } = req.params; // ID du commerce
+        const { client_nom } = req.body; // Nom du client scanné
+
+        // 1. On ajoute le point au compteur du commerce (ton code habituel)
+        // ... (ton code de mise à jour de la table business) ...
+
+        // 2. NOUVEAU : On enregistre le scan dans l'historique
+        const { error: scanError } = await supabase
+            .from('scans')
+            .insert([
+                { 
+                    business_id: id, 
+                    client_nom: client_nom || 'Client Anonyme', 
+                    points_ajoutes: 1 
+                }
+            ]);
+
+        if (scanError) console.error("Erreur historique:", scanError);
+
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ success: false });
+    }
+});
+
+app.post('/api/dashboard-data/:slug', async (req, res) => {
+    try {
+        const { slug } = req.params;
+        const { data: b } = await supabase.from('business').select('*').eq('slug', slug).single();
+        const { data: customers } = await supabase.from('customers').select('*').eq('business_id', b.id).order('created_at', { ascending: false });
+        const tableRows = (customers || []).map(c => `<tr class="hover:bg-slate-50 transition"><td class="p-4">${c.prenom} ${c.nom}</td><td class="p-4">${c.email}</td><td class="p-4">${c.points} PTS</td></tr>`).join('');
+        res.json({ html: tableRows, nbClients: customers.length });
+    } catch (e) { res.status(500).json({ error: "Erreur" }); }
+});
+
+// --- ROUTES CLIENTS & API POINTS ---
+app.get('/signup/:slug', async (req, res) => {
+    const { data: b } = await supabase.from('business').select('*').eq('slug', req.params.slug).single();
+    if (!b.is_active) return res.send("Inscription temporairement fermée.");
+    res.send(render('signup-client.html', { nom: b.nom, slug: b.slug, logo_url: b.config_design.logo_url }));
+});
+
+app.post('/api/register-customer/:slug', async (req, res) => {
+    const { data: b } = await supabase.from('business').select('id').eq('slug', req.params.slug).single();
+    const { data: customer } = await supabase.from('customers').insert([{ business_id: b.id, nom: req.body.nom, prenom: req.body.prenom, email: req.body.email, telephone: req.body.telephone, points: 0 }]).select().single();
+    res.redirect(`/my-card/${customer.id}`);
+});
+
+app.get('/my-card/:customer_id', async (req, res) => {
+    const { data: c } = await supabase.from('customers').select('*, business (*)').eq('id', req.params.customer_id).single();
+    if (!c.business.is_active) return res.send("Cette carte est temporairement inactive.");
+    const b = c.business;
+    res.send(render('my-card.html', { nom: b.nom, logo_url: b.config_design.logo_url, prenom_client: c.prenom, nom_client: c.nom, points: c.points, customer_id: c.id, supabase_url: process.env.SUPABASE_URL, supabase_key: process.env.SUPABASE_KEY, qr_client: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${c.id}`, card_html: b.config_design.card_html, card_css: b.config_design.card_css }));
+});
+
+app.post('/api/add-points/:slug', async (req, res) => {
+    try {
+        const { slug } = req.params;
+        const { customerId } = req.body;
+        const authHeader = req.headers.authorization;
+        const ADMIN_EMAIL = 'lafendiabdallahimad@gmail.com'; 
+
+        if (!authHeader) return res.status(401).json({ success: false, message: "Non autorisé" });
+        const token = authHeader.split(' ')[1];
+
+        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+        const { data: b } = await supabase.from('business').select('*').eq('slug', slug).single();
+
+        if (authError || !user || !b) return res.status(403).json({ success: false, message: "Session invalide" });
+
+        const isOwner = user.email === b.gestionnaire_email;
+        const isAdmin = user.email === ADMIN_EMAIL;
+
+        if (!isOwner && !isAdmin) {
+            return res.status(403).json({ success: false, message: "Accès refusé" });
+        }
+
+        const { data: c } = await supabase.from('customers').select('*').eq('id', customerId.trim()).single();
+        if (!c) return res.status(404).json({ success: false, message: "Client introuvable" });
+
+        // 1. Ajouter le point
+        const newTotal = parseInt(c.points || 0) + 1;
+        await supabase.from('customers').update({ points: newTotal }).eq('id', c.id);
+        
+        // --- NOUVEAU : ENREGISTREMENT DANS L'HISTORIQUE DES SCANS (Table scans) ---
+        const { error: scanError } = await supabase
+            .from('scans')
+            .insert([
+                { 
+                    business_id: b.id, // On utilise l'ID du commerce récupéré plus haut
+                    client_nom: `${c.prenom} ${c.nom}`,
+                    points_ajoutes: 1 
+                }
+            ]);
+        
+        if (scanError) console.error("Erreur insertion table scans:", scanError.message);
+        // -------------------------------------------------------------------------
+
+        // Log de maintenance/action (ton code habituel)
+        if (isAdmin && !isOwner) {
+            await logAction('MAINTENANCE', `Admin (${ADMIN_EMAIL}) a ajouté 1pt à ${c.prenom} (Commerce: ${slug})`);
+        } else {
+            await logAction('POINTS', `+1 pt pour ${c.prenom} par ${user.email}`);
+        }
+
+        res.json({ success: true, customerName: c.prenom, newTotal: newTotal });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, message: "Erreur serveur" });
+    }
+});
+
+app.get('/scanner/:slug', async (req, res) => {
+    try {
+        const { slug } = req.params;
+        const authToken = req.query.auth; // On récupère le token passé dans l'URL
+
+        const { data: b } = await supabase.from('business').select('*').eq('slug', slug).single();
+        if (!b) return res.status(404).send("Commerce inconnu");
+
+        // VÉRIFICATION : Est-ce que la personne qui ouvre le scanner est bien le commerçant ?
+        const { data: { user }, error: authError } = await supabase.auth.getUser(authToken);
+
+        if (authError || !user || user.email !== b.gestionnaire_email) {
+            return res.status(403).send("Accès refusé : Seul le commerçant peut scanner.");
+        }
+
+        res.send(render('scanner.html', { 
+            nom: b.nom, 
+            slug: b.slug, 
+            logo_url: b.config_design.logo_url,
+            auth_token: authToken // On repasse le token pour l'API de validation
+        }));
+    } catch (err) { res.status(500).send("Erreur"); }
+});
+
+app.post('/api/reset-points/:id', async (req, res) => {
+    try {
+        const { data: customer } = await supabase.from('customers').select('business(slug)').eq('id', req.params.id).single();
+        await supabase.from('customers').update({ points: 0 }).eq('id', req.params.id);
+        res.redirect(`/dashboard/${customer.business.slug}`);
+    } catch (err) { res.status(500).send("Erreur"); }
+});
+
+app.get('/admin/logs', async (req, res) => {
+    const { data: logs } = await supabase.from('system_logs').select('*').order('created_at', { ascending: false }).limit(50);
+    const logsHtml = (logs || []).map(l => `<div class="flex gap-4 p-4 border-b border-slate-100 text-[11px] items-center hover:bg-slate-50 transition"><span class="text-slate-400 font-mono">${new Date(l.created_at).toLocaleString()}</span><span class="font-black ${l.action_type === 'SECURITY' ? 'text-red-500' : 'text-indigo-500'} uppercase w-24">[${l.action_type}]</span><span class="text-slate-700 font-semibold">${l.message}</span></div>`).join('');
+    res.send(render('admin-logs.html', { content: logsHtml }));
+});
+// ROUTE POUR CHANGER LE MOT DE PASSE DEPUIS LE DASHBOARD
+app.post('/api/update-password/:slug', async (req, res) => {
+    try {
+        const { slug } = req.params;
+        const { old_password, new_password } = req.body;
+
+        // 1. Récupérer le commerce pour avoir l'email officiel
+        const { data: b, error: bError } = await supabase.from('business').select('*').eq('slug', slug).single();
+        
+        if (bError || !b) {
+            return res.status(404).json({ success: false, message: "Commerce introuvable" });
+        }
+
+        console.log(`Tentative de changement pour : ${b.gestionnaire_email}`);
+        console.log(`Test de l'ancien mot de passe fourni : ${old_password}`);
+
+        // 2. VÉRIFICATION DIRECTE AUPRÈS DE SUPABASE AUTH
+        const { data: authTest, error: authError } = await supabase.auth.signInWithPassword({
+            email: b.gestionnaire_email,
+            password: old_password.trim() // On enlève les espaces cachés au cas où
+        });
+
+        if (authError) {
+            console.error("Erreur Auth Supabase :", authError.message);
+            return res.status(401).json({ 
+                success: false, 
+                message: "L'ancien mot de passe d'authentification est incorrect (Auth)." 
+            });
+        }
+
+        // 3. SI OK -> ON RÉCUPÈRE L'ID DE L'USER ET ON CHANGE LE MDP
+        const userId = authTest.user.id;
+        const { error: updateError } = await supabase.auth.admin.updateUserById(userId, {
+            password: new_password.trim()
+        });
+
+        if (updateError) throw updateError;
+
+        // 4. SYNCHRONISATION DANS LA TABLE BUSINESS
+        await supabase.from('business').update({ 
+            password: new_password.trim() 
+        }).eq('slug', slug);
+
+        console.log("Succès : Mot de passe mis à jour partout.");
+        res.json({ success: true });
+
+    } catch (err) {
+        console.error("Erreur Critique :", err);
+        res.status(500).json({ success: false, message: "Erreur technique lors de la mise à jour" });
+    }
+});
+// --- ROUTE DE SUPPRESSION TOTALE (MAINTENANCE ADMIN UNIQUEMENT) ---
+app.post('/api/supprimer-commerce/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const ADMIN_EMAIL = 'ton-email-admin@gmail.com'; // <--- TON EMAIL ADMIN ICI
+        const authHeader = req.headers.authorization;
+
+        // 1. Sécurité : Seul l'admin peut supprimer un compte SaaS
+        if (!authHeader) return res.status(401).json({ success: false, message: "Non autorisé" });
+        const token = authHeader.split(' ')[1];
+        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+        if (authError || !user || user.email !== ADMIN_EMAIL) {
+            return res.status(403).json({ success: false, message: "Accès refusé : Réservé au Super Admin" });
+        }
+
+        // 2. Récupérer les infos du commerce avant suppression
+        const { data: b, error: bError } = await supabase.from('business').select('*').eq('id', id).single();
+        if (bError || !b) return res.status(404).json({ success: false, message: "Commerce introuvable" });
+
+        console.log(`🧹 Nettoyage complet pour : ${b.nom} (${b.gestionnaire_email})`);
+
+        // 3. SUPPRESSION DANS SUPABASE AUTH
+        // On cherche l'ID de l'utilisateur Auth via son email
+        const { data: userList } = await supabase.auth.admin.listUsers();
+        const authUser = userList.users.find(u => u.email === b.gestionnaire_email);
+
+        if (authUser) {
+            const { error: deleteAuthErr } = await supabase.auth.admin.deleteUser(authUser.id);
+            if (deleteAuthErr) console.error("Erreur suppression Auth:", deleteAuthErr.message);
+        }
+
+        // 4. SUPPRESSION DES DONNÉES (Cascading automatique si tes clés étrangères sont bien réglées)
+        // On supprime d'abord les clients liés au business
+        await supabase.from('customers').delete().eq('business_id', id);
+        
+        // On supprime enfin le business
+        const { error: deleteBusErr } = await supabase.from('business').delete().eq('id', id);
+        if (deleteBusErr) throw deleteBusErr;
+
+        await logAction('MAINTENANCE', `Suppression définitive du commerce : ${b.nom}`, { email: b.gestionnaire_email });
+
+        res.json({ success: true, message: "Commerce et compte Auth supprimés avec succès" });
+
+    } catch (err) {
+        console.error("Erreur suppression:", err);
+        res.status(500).json({ success: false, message: "Erreur lors de la suppression" });
+    }
+});
+app.get('/dashboard/:slug/logout', async (req, res) => {
+    const { slug } = req.params;
+    await supabase.auth.signOut(); 
+    res.redirect(`/dashboard/${slug}`);
+});
+app.get('/admin/login', (req, res) => {
+    res.send(render('admin-login.html', {
+        supabase_url: process.env.SUPABASE_URL,
+        supabase_key: process.env.SUPABASE_KEY
+    }));
+});
+// --- VALIDER LE PAIEMENT (ADMIN UNIQUEMENT) ---
+// --- VALIDER LE PAIEMENT (MODE SANS LOGIN POUR TEST) ---
+app.post('/api/valider-paiement/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // On enlève TOUTE la vérification du authHeader et du token pour le moment
+        console.log(`Validation forcée du paiement pour le commerce ID: ${id}`);
+
+        // On met directement à jour dans la base de données
+        const { error } = await supabase.from('business')
+            .update({ 
+                statut: 'payé', 
+                is_active: true 
+            })
+            .eq('id', id);
+
+        if (error) {
+            console.error("Erreur Supabase:", error.message);
+            return res.status(500).json({ success: false });
+        }
+
+        res.json({ success: true, message: "Abonnement activé !" });
+
+    } catch (err) {
+        console.error("Erreur crash:", err);
+        res.status(500).json({ success: false });
+    }
+});
+
+app.post('/api/toggle-maintenance/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const token = req.query.auth; // On récupère le badge passé dans l'URL
+        const ADMIN_EMAIL = 'lafendiabdallahimad@gmail.com';
+
+        // Vérification d'identité
+        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+        if (authError || !user || user.email !== ADMIN_EMAIL) {
+            return res.status(403).send("Action non autorisée");
+        }
+
+        // On récupère l'état actuel
+        const { data: b } = await supabase.from('business').select('is_active').eq('id', id).single();
+        
+        // On inverse l'état (true -> false ou false -> true)
+        const { error } = await supabase.from('business')
+            .update({ is_active: !b.is_active })
+            .eq('id', id);
+
+        if (error) throw error;
+        res.redirect(`/admin/inventory?auth=${token}`); // On repart à l'inventaire avec le badge
+    } catch (err) { res.status(500).send(err.message); }
+});
+app.get('/', (req, res) => res.redirect('/admin/inventory'));
+app.listen(3000, () => console.log(`🚀 http://localhost:3000`));

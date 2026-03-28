@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Ma Carte | {{nom}}</title>
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0f172a">
+    <link rel="apple-touch-icon" href="{{logo_url}}">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        /* On injecte le CSS de base défini dans l'admin */
+        {{card_css}}
+
+        /* --- ANIMATIONS MAGIQUES --- */
+        
+        /* Transition douce pour les changements de couleur de la carte */
+        .card-view {
+            transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Animation du chiffre qui grandit */
+        .pts-animation {
+            display: inline-block;
+            animation: magicBounce 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            color: #6366f1 !important;
+        }
+
+        @keyframes magicBounce {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.8); filter: brightness(1.5); }
+            100% { transform: scale(1); }
+        }
+
+        /* État "CADEAU GAGNÉ" (Gold) */
+        .is-reward-ready {
+            background: linear-gradient(135deg, #fbbf24, #f59e0b) !important;
+            color: white !important;
+            box-shadow: 0 0 30px rgba(245, 158, 11, 0.5) !important;
+            border: 2px solid rgba(255,255,255,0.4) !important;
+        }
+
+        /* Petite étincelle quand on gagne */
+        .is-reward-ready::after {
+            content: "🎁 CADEAU PRÊT !";
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: white;
+            color: #d97706;
+            font-size: 8px;
+            font-weight: 900;
+            padding: 4px 8px;
+            border-radius: 20px;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Style pour l'install prompt */
+        #install-prompt {
+            position: fixed; bottom: 20px; left: 20px; right: 20px;
+            background: white; border-radius: 24px; padding: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            display: none; z-index: 9999; text-align: center;
+            font-family: sans-serif; color: #1e293b;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+    </style>
+</head>
+<body class="card-view" id="main-card">
+    
+    <div id="card-content-wrapper">
+        {{card_html}}
+    </div>
+
+    <div id="install-prompt">
+        <p style="margin:0 0 10px 0; font-size: 14px; font-weight: 800;">🌟 <b>Gardez votre carte sur vous !</b></p>
+        <p style="margin:0; font-size: 12px; color: #64748b; line-height: 1.5;">
+            Cliquez sur <i class="fa-solid fa-arrow-up-from-bracket"></i> puis <br><b>"Sur l'écran d'accueil"</b>
+        </p>
+        <button onclick="this.parentElement.style.display='none'" style="margin-top:15px; border:none; background:#f1f5f9; padding: 8px 20px; border-radius: 12px; color:#6366f1; font-weight:bold; cursor:pointer;">Plus tard</button>
+    </div>
+
+    <script>
+        // 1. Initialisation Supabase
+        const supabaseUrl = "{{supabase_url}}"; // Tu devras passer ces variables depuis server.js
+        const supabaseKey = "{{supabase_key}}";
+        const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+        const customerId = "{{customer_id}}";
+        const mainCard = document.getElementById('main-card');
+
+        // Fonction pour vérifier le palier (ex: 20 points)
+        function checkPointsLevel(pts) {
+            // Ici tu peux adapter le chiffre selon les paliers du commerçant
+            if (pts >= 20) {
+                mainCard.classList.add('is-reward-ready');
+            } else {
+                mainCard.classList.remove('is-reward-ready');
+            }
+        }
+
+        // 2. Écoute des changements en Temps Réel
+        _supabase
+            .channel('any')
+            .on('postgres_changes', { 
+                event: 'UPDATE', 
+                schema: 'public', 
+                table: 'customers', 
+                filter: `id=eq.${customerId}` 
+            }, payload => {
+                const newPoints = payload.new.points;
+                const pointsElement = document.querySelector('.pts'); // On cible la classe .pts que tu as mis dans ton HTML de base
+
+                if (pointsElement) {
+                    // Lancement de l'animation Magic
+                    pointsElement.classList.add('pts-animation');
+                    pointsElement.innerText = `${newPoints} PTS`;
+                    
+                    // Vérification du look Gold
+                    checkPointsLevel(newPoints);
+
+                    // Retrait de la classe d'animation après 600ms
+                    setTimeout(() => {
+                        pointsElement.classList.remove('pts-animation');
+                    }, 600);
+                }
+            })
+            .subscribe();
+
+        // Vérification initiale au chargement
+        window.onload = () => {
+            const initialPts = parseInt("{{points}}");
+            checkPointsLevel(initialPts);
+        };
+
+        // Install prompt logic
+        if (!window.navigator.standalone && !window.matchMedia('(display-mode: standalone)').matches) {
+            setTimeout(() => {
+                document.getElementById('install-prompt').style.display = 'block';
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
