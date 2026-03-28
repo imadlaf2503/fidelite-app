@@ -80,6 +80,116 @@
     </style>
 </head>
 <body class="card-view" id="main-card">
+    <div id="splash-screen">
+            <div class="splash-content">
+                <img src="{{logo_url}}" alt="Logo {{nom}}" class="splash-logo">
+                
+                <h1 class="splash-title">Carte Fidélité</h1>
+                <p class="splash-business-name">{{nom}}</p>
+                
+                <div class="splash-spinner"></div>
+            </div>
+        </div>
+
+        <style>
+            /* Police moderne (si tu ne l'as pas déjà) */
+            @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap');
+
+            /* Conteneur principal plein écran */
+            #splash-screen {
+                position: fixed;
+                inset: 0; /* top, right, bottom, left = 0 */
+                background-color: #ffffff; /* Fond blanc pur pour faire ressortir le logo */
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 9999; /* Toujours au-dessus de tout */
+                transition: opacity 0.5s ease-out, visibility 0.5s; /* Animation de disparition douce */
+                font-family: 'Poppins', sans-serif;
+            }
+
+            /* Conteneur du contenu pour le centrer */
+            .splash-content {
+                text-align: center;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 15px;
+                padding: 20px;
+            }
+
+            /* Style du Logo */
+            .splash-logo {
+                max-width: 180px; /* Taille max sur téléphone */
+                max-height: 90px;
+                object-fit: contain; /* Garde les proportions */
+                margin-bottom: 10px;
+                /* Petite animation d'apparition du logo */
+                animation: popIn 0.8s ease-out;
+            }
+
+            /* Style du titre "Carte Fidélité" */
+            .splash-title {
+                font-size: 14px;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 2px;
+                color: #64748b; /* Gris doux */
+                margin: 0;
+            }
+
+            /* Style du Nom du Commerce */
+            .splash-business-name {
+                font-size: 24px;
+                font-weight: 800;
+                color: #0f172a; /* Presque noir */
+                margin: 0;
+                letter-spacing: -0.5px;
+            }
+
+            /* Petit Spinner animé en bas */
+            .splash-spinner {
+                margin-top: 30px;
+                width: 24px;
+                height: 24px;
+                border: 3px solid #f1f5f9;
+                border-top: 3px solid #6366f1; /* Couleur primary */
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+            }
+
+    /* --- ANIMATIONS --- */
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    @keyframes popIn {
+        0% { transform: scale(0.8); opacity: 0; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+
+    /* Classe pour cacher le splash (activée par JS) */
+    #splash-screen.hidden {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none; /* Empêche de cliquer à travers pendant la transition */
+    }
+</style>
+
+<script>
+    // Attend que TOUTE la page soit chargée (images incluses)
+    window.addEventListener('load', function() {
+        // Définit la durée (3000 millisecondes = 3 secondes)
+        const splashDuration = 3000; 
+
+        setTimeout(function() {
+            const splash = document.getElementById('splash-screen');
+            // Ajoute la classe CSS qui déclenche la transition d'opacité
+            splash.classList.add('hidden');
+        }, splashDuration);
+    });
+</script>
     
     <div id="card-content-wrapper">
         {{card_html}}
