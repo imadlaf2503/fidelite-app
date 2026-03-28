@@ -485,7 +485,7 @@ app.get('/my-card/:customer_id', async (req, res) => {
     const { data: c } = await supabase.from('customers').select('*, business (*)').eq('id', req.params.customer_id).single();
     if (!c.business.is_active) return res.send("Cette carte est temporairement inactive.");
     const b = c.business;
-    res.send(render('my-card.html', { nom: b.nom, logo_url: b.config_design.logo_url, prenom_client: c.prenom, nom_client: c.nom, points: c.points, customer_id: c.id, supabase_url: process.env.SUPABASE_URL, supabase_key: process.env.SUPABASE_KEY, qr_client: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${c.id}`, card_html: b.config_design.card_html, card_css: b.config_design.card_css }));
+    res.send(render('my-card.html', { nom: b.nom, logo_url: b.config_design.logo_url, prenom: c.prenom, nom_client: c.nom, points: c.points, customer_id: c.id, supabase_url: process.env.SUPABASE_URL, supabase_key: process.env.SUPABASE_KEY, qr_client: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${c.id}`, card_html: b.config_design.card_html, card_css: b.config_design.card_css }));
 });
 
 app.post('/api/add-points/:slug', async (req, res) => {
