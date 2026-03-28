@@ -524,24 +524,32 @@ app.get('/my-card/:customer_id', async (req, res) => {
         }
 
         const b = c.business;
-
-        // ON RÉCUPÈRE LE PALIER (ex: 10) DEPUIS LA TABLE BUSINESS
         const threshold = parseInt(b.points_thresholds) || 10;
 
+        // --- ÉTAPE CRUCIALE : ON PRÉPARE L'INJECTION ---
+        // On crée un bloc unique qui contient le style et la structure du studio
+        const contenuStudioGenere = `
+            <style>${b.config_design.card_css || ''}</style>
+            ${b.config_design.card_html || ''}
+        `;
+
         res.send(render('my-card.html', { 
+            // Variables de base
             nom: b.nom, 
             logo_url: b.config_design.logo_url, 
             prenom: c.prenom, 
             nom_client: c.nom, 
             points: c.points, 
             customer_id: c.id, 
-            threshold: threshold, // <--- AJOUTÉ : INDISPENSABLE POUR L'ANIMATION
+            threshold: threshold,
             supabase_url: process.env.SUPABASE_URL, 
             supabase_key: process.env.SUPABASE_KEY, 
-            qr_client: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${c.id}`, 
-            card_html: b.config_design.card_html, 
-            card_css: b.config_design.card_css 
+            qr_client: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${c.id}`,
+            
+            // --- AJOUT : La variable que my-card.html attend ---
+            CONTENU_STUDIO: contenuStudioGenere 
         }));
+
     } catch (err) {
         console.error(err);
         res.status(500).send("Erreur lors du chargement de la carte.");

@@ -3,311 +3,130 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Ma Carte | {{nom}}</title>
-    
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="{{logo_url}}">
-
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>Carte Fidélité</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Poppins:wght@600&family=Reenie+Beanie&display=swap');
-
-        :root {
-            --wallet-bg: #000000; 
-            --card-bg: #1e293b;   
-            --text-main: #ffffff;
-            --text-dim: rgba(255, 255, 255, 0.4);
-            --primary: #6366f1;
-        }
-
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-
         body {
-            margin: 0;
-            padding: 0;
-            background-color: var(--wallet-bg);
-            font-family: 'Inter', sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-start; 
-            min-height: 100vh;
-            color: var(--text-main);
-            overflow: hidden;
+            margin: 0; padding: 0;
+            background-color: #000000;
+            display: flex; flex-direction: column; align-items: center;
+            min-height: 100vh; overflow: hidden;
         }
 
-        /* --- CARTE (35% DE L'ÉCRAN) --- */
-        .wallet-card {
+        /* LA CARTE */
+        #main-card {
             width: 92%;
             max-width: 400px;
             height: 35vh; 
-            background-color: var(--card-bg);
-            border-radius: 24px;
             margin-top: 25px;
             position: relative;
+            border-radius: 24px;
             box-shadow: 0 15px 40px rgba(0,0,0,0.6);
-            padding: 22px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            border: 1px solid rgba(255,255,255,0.1);
+            overflow: hidden;
+            background-color: transparent;
             animation: cardFadeIn 0.8s ease-out;
-            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-            overflow: hidden; /* Important pour le shine */
+            transition: all 0.5s ease;
         }
 
-        @keyframes cardFadeIn {
-            0% { transform: translateY(-20px); opacity: 0; }
-            100% { transform: translateY(0); opacity: 1; }
-        }
-
-        /* --- NOUVELLES ANIMATIONS --- */
-        
-        /* 1. Animation de passage de lumière (Shine) */
-        .shine-effect::after {
-            content: '';
+        .studio-container {
             position: absolute;
-            top: 0; left: -100%;
-            width: 50%; height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
-            transform: skewX(-20deg);
-            animation: shineAnim 0.8s ease-in-out;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            transition: opacity 0.3s ease;
         }
 
-        @keyframes shineAnim {
-            0% { left: -100%; }
-            100% { left: 150%; }
-        }
-
-        /* 2. Animation Pop sur les points */
-        .pop-animation {
-            animation: popAnim 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        @keyframes popAnim {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.3); color: #fbbf24; }
-            100% { transform: scale(1); }
-        }
-
-        /* 3. Animation Carte Dorée (Récompense) */
-        .gold-anim {
+        /* --- L'ANIMATION GOLD (FORCÉE) --- */
+        .is-gold {
             background: linear-gradient(135deg, #bf953f, #fcf6ba, #b38728, #fbf5b7, #aa771c) !important;
-            box-shadow: 0 0 30px rgba(251, 191, 36, 0.6);
-            transform: scale(1.05);
+            animation: goldPulse 0.6s infinite alternate !important;
         }
 
-        /* -------------------------- */
-
-        .card-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-        }
-        .business-logo {
-            max-width: 110px;
-            max-height: 35px;
-            object-fit: contain;
-        }
-        .pts-badge {
-            background: rgba(255,255,255,0.15);
-            padding: 7px 14px;
-            border-radius: 14px;
-            font-weight: 800;
-            font-size: 15px;
-            transition: transform 0.3s;
+        @keyframes goldPulse {
+            0% { box-shadow: 0 0 20px #ffd700; transform: scale(1.02); }
+            100% { box-shadow: 0 0 40px #ffd700; transform: scale(1.05); }
         }
 
-        /* --- CENTRE : QR CODE AGRANDI --- */
-        .card-center {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-grow: 1;
+        /* --- ANIMATIONS DE BASE --- */
+        @keyframes cardFadeIn { 0% { transform: translateY(-20px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+        
+        .shine-effect::after {
+            content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            transform: skewX(-20deg); animation: shineAnim 0.8s ease-in-out;
+            z-index: 100;
         }
-        .qr-container {
-            background: white;
-            padding: 10px;
-            border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-        }
-        .qr-container img {
-            display: block;
-            height: 16vh; 
-            width: auto;
-        }
+        @keyframes shineAnim { 0% { left: -100%; } 100% { left: 150%; } }
 
-        .card-bottom {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-        }
-        .client-info {
-            display: flex;
-            flex-direction: column;
-        }
-        .label {
-            font-size: 8px;
-            text-transform: uppercase;
-            font-weight: 700;
-            color: var(--text-dim);
-            letter-spacing: 1.2px;
-            margin-bottom: 2px;
-        }
-        .client-name {
-            font-size: 15px;
-            font-weight: 600;
-            letter-spacing: -0.3px;
-        }
-
-        /* --- SIGNATURE LAI AU STYLO --- */
-        .lai-signature {
-            font-family: 'Reenie Beanie', cursive;
-            font-size: 34px; 
-            color: var(--text-main);
-            opacity: 0.7;
-            transform: rotate(-4deg);
-            margin-bottom: -5px;
-        }
-
-        /* État GOLD PERSISTANT (Récompense prête) */
-        .is-reward-ready {
-            background: linear-gradient(135deg, #fbbf24, #d97706) !important;
-            border: none;
-        }
-        .is-reward-ready .lai-signature, 
-        .is-reward-ready .client-name,
-        .is-reward-ready .pts-badge { color: #000 !important; }
-        .is-reward-ready .label { color: rgba(0,0,0,0.5); }
-
-        /* SPLASH SCREEN OPTIMISÉ */
+        /* --- SPLASH SCREEN --- */
         #splash-screen {
-            position: fixed; inset: 0; background: #fff;
+            position: fixed; inset: 0; background: #fff; z-index: 9999;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            z-index: 9999; transition: 0.5s; font-family: 'Poppins', sans-serif;
+            transition: 0.8s ease;
         }
         #splash-screen.hidden { opacity: 0; visibility: hidden; }
-        .splash-logo { max-width: 100px; max-height: 80px; object-fit: contain; margin-bottom: 20px; animation: pulse 1.5s infinite; }
-        
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
-
-        /* PROMPT INSTALLATION */
-        #install-prompt {
-            position: fixed; bottom: 30px; width: 85%;
-            background: rgba(255,255,255,0.95); backdrop-filter: blur(10px);
-            border-radius: 24px; padding: 20px; display: none; z-index: 1000;
-            color: #000; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.4);
-        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
-
 <body>
 
     <div id="splash-screen">
-        <img src="{{logo_url}}" class="splash-logo">
-        <div class="splash-text-container">
-            <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: #94a3b8; text-align: center;">Carte de Fidélité</div>
-            <div style="font-size: 18px; font-weight: 800; color: #0f172a; text-align: center;">{{nom}}</div>
+        <img src="{{logo_url}}" style="max-width: 120px; margin-bottom: 10px;">
+        <div style="text-align: center; margin-bottom: 20px; font-family: sans-serif;">
+            <div style="font-size: 12px; text-transform: uppercase; color: #888;">Carte de Fidélité</div>
+            <div style="font-size: 20px; font-weight: bold; color: #000;">{{nom}}</div>
         </div>
-        <div style="margin-top: 30px; width: 20px; height: 20px; border: 2px solid #f1f5f9; border-top: 2px solid #1e293b; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+        <div style="width: 24px; height: 24px; border: 3px solid #f3f3f3; border-top: 3px solid #E8612D; border-radius: 50%; animation: spin 1s linear infinite;"></div>
     </div>
 
-    <style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>
-
-    <div class="wallet-card" id="main-card">
-        
-        <div class="card-top">
-            <img src="{{logo_url}}" class="business-logo">
-            <div class="pts-badge pts">{{points}} PTS</div>
+    <div id="main-card">
+        <div class="studio-container">
+            {{CONTENU_STUDIO}}
         </div>
-
-        <div class="card-center">
-            <div class="qr-container">
-                <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{customer_id}}&ecc=M">
-            </div>
-        </div>
-
-        <div class="card-bottom">
-            <div class="client-info">
-                <span class="label">Propriétaire</span>
-                <span class="client-name">{{prenom}} {{nom_client}}</span>
-            </div>
-            
-            <div class="lai-signature">
-                Lai
-            </div>
-        </div>
-    </div>
-
-    <div id="install-prompt">
-        <p style="margin:0; font-size: 14px; font-weight: 800;">Installer la carte</p>
-        <p style="margin:10px 0; font-size: 12px; opacity: 0.7;">Appuyez sur <i class="fa-solid fa-arrow-up-from-bracket"></i> puis "Sur l'écran d'accueil".</p>
-        <button onclick="this.parentElement.style.display='none'" style="border:none; background:#000; color:#fff; padding: 12px; border-radius: 12px; width:100%; font-weight:700;">D'accord</button>
     </div>
 
     <script>
-        const supabaseUrl = "{{supabase_url}}";
-        const supabaseKey = "{{supabase_key}}";
-        const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
-        const customerId = "{{customer_id}}";
-        const threshold = parseInt("{{threshold}}") || 10; // Seuil dynamique par commerçant
-        const mainCard = document.getElementById('main-card');
-        const ptsBadge = document.querySelector('.pts');
+        const _supabase = supabase.createClient("{{supabase_url}}", "{{supabase_key}}");
+        // On récupère le palier dynamiquement
+        const threshold = parseInt("{{threshold}}") || 10;
+        
+        function triggerUpdate(newPts) {
+            const card = document.getElementById('main-card');
+            const container = document.querySelector('.studio-container');
+            const studioBg = document.querySelector('.studio-bg');
+            const ptsDisplay = document.querySelector('.pts-value');
+            
+            // 1. Update points & Shine
+            if(ptsDisplay) { ptsDisplay.innerText = newPts; }
+            card.classList.add('shine-effect');
+            setTimeout(() => card.classList.remove('shine-effect'), 800);
 
-        window.addEventListener('load', () => {
-            setTimeout(() => document.getElementById('splash-screen').classList.add('hidden'), 2500);
-        });
+            // 2. Logique Gold au Palier
+            if (newPts > 0 && newPts % threshold === 0) {
+                // On applique l'or sur la CARTE elle-même
+                card.classList.add('is-gold');
+                
+                // On cache temporairement le fond orange et le contenu
+                if(studioBg) studioBg.style.opacity = "0";
+                container.style.opacity = "0.3"; // On laisse deviner le contenu en dessous
 
-        // Fonction pour gérer l'apparence selon les points
-        function checkPointsLevel(pts) {
-            if (pts >= threshold) {
-                mainCard.classList.add('is-reward-ready');
-            } else {
-                mainCard.classList.remove('is-reward-ready');
-            }
-        }
-
-        // Animation complète lors d'un scan (Temps réel)
-        function triggerScanAnimations(newPts) {
-            // 1. Flash de lumière (Shine)
-            mainCard.classList.add('shine-effect');
-            setTimeout(() => mainCard.classList.remove('shine-effect'), 800);
-
-            // 2. Pop sur le badge de points
-            ptsBadge.innerText = `${newPts} PTS`;
-            ptsBadge.classList.add('pop-animation');
-            setTimeout(() => ptsBadge.classList.remove('pop-animation'), 500);
-
-            // 3. Si SEUIL ATTEINT -> Animation Dorée Spéciale
-            if (newPts >= threshold) {
-                mainCard.classList.add('gold-anim');
                 setTimeout(() => {
-                    mainCard.classList.remove('gold-anim');
-                    checkPointsLevel(newPts); // Appliquer le style permanent
-                }, 2000); // L'animation dorée dure 2 sec avant de se stabiliser
-            } else {
-                checkPointsLevel(newPts);
+                    card.classList.remove('is-gold');
+                    if(studioBg) studioBg.style.opacity = "1";
+                    container.style.opacity = "1";
+                }, 3000);
             }
         }
 
-        // Ecouteur temps réel Supabase
-        _supabase.channel('custom-filter-channel')
-        .on('postgres_changes', { 
-            event: 'UPDATE', schema: 'public', table: 'customers', filter: `id=eq.${customerId}` 
-        }, payload => {
-            const newPoints = payload.new.points;
-            triggerScanAnimations(newPoints);
-        }).subscribe();
+        _supabase.channel('changes').on('postgres_changes', { 
+            event: 'UPDATE', schema: 'public', table: 'customers', filter: `id=eq.{{customer_id}}` 
+        }, payload => triggerUpdate(payload.new.points)).subscribe();
 
-        // Init au chargement
-        window.onload = () => checkPointsLevel(parseInt("{{points}}"));
-
-        if (!window.navigator.standalone && /iPhone|iPad|iPod/.test(navigator.userAgent)) {
-            setTimeout(() => document.getElementById('install-prompt').style.display = 'block', 4500);
-        }
+        window.onload = () => setTimeout(() => document.getElementById('splash-screen').classList.add('hidden'), 1500);
     </script>
 </body>
 </html>
