@@ -229,6 +229,16 @@
 <script>
     const sb = window.supabase.createClient('{{supabase_url}}', '{{supabase_key}}');
     const threshold = {{threshold}};
+    // Dans la partie initialisation
+    const phoneAdd = window.intlTelInput(document.querySelector("#add_phone"), { 
+        initialCountry: "fr", 
+        utilsScript: "https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/utils.js" 
+    });
+
+    const phoneEdit = window.intlTelInput(document.querySelector("#edit_phone"), { 
+        initialCountry: "fr", 
+        utilsScript: "https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/utils.js" 
+    });
 
     const phoneInputAdd = window.intlTelInput(document.querySelector("#add_phone"), {
         initialCountry: "fr",
@@ -322,17 +332,24 @@
         }
     }
 
-    // AJOUT CLIENT
-    // AJOUTER CLIENT (RECOMMANDÉ)
+    // AJOUTER CLIENT
 document.getElementById('addCustomerForm').onsubmit = async (e) => {
     e.preventDefault();
     
+    // On récupère les valeurs
     const prenom = document.getElementById('add_prenom').value;
     const nom = document.getElementById('add_nom').value;
-    const phone = phoneAdd.getNumber(); // Récupère le format international (+33...)
     const email = document.getElementById('add_email').value;
 
-    // 1. Insertion avec .select() pour obtenir la réponse de Supabase
+    // Vérification de sécurité pour le téléphone
+    if (!phoneAdd) {
+        alert("Erreur d'initialisation du champ téléphone.");
+        return;
+    }
+
+    const phone = phoneAdd.getNumber(); // Récupère le format +33...
+
+    // 1. Insertion dans Supabase avec .select() pour avoir le nouvel ID
     const { data, error } = await sb.from('customers').insert([{
         prenom: prenom,
         nom: nom,
@@ -340,23 +357,23 @@ document.getElementById('addCustomerForm').onsubmit = async (e) => {
         email: email,
         business_id: "{{business_id}}",
         points: 1
-    }]).select(); // <--- C'est ici que la magie opère
+    }]).select();
 
     if (error) {
-        alert("Erreur lors de la création : " + error.message);
+        alert("Erreur Supabase : " + error.message);
     } else if (data && data.length > 0) {
-        // 2. On récupère l'ID généré automatiquement par Supabase
-        const newId = data[0].id;
+        // 2. Récupération de l'ID du nouveau client
+        const newCustomerId = data[0].id;
 
-        // 3. On construit le lien direct vers la carte
-        const cardUrl = `https://fidelite-app-n2cz.onrender.com/my-card/${newId}`;
+        // 3. Construction du lien recommandé (/my-card/ID)
+        const cardUrl = `https://fidelite-app-n2cz.onrender.com/my-card/${newCustomerId}`;
         
         // 4. Préparation du message WhatsApp
-        const message = `Bonjour ${prenom} ! 👋\n\nBienvenue chez {{nom}} ! ✨\nVotre carte de fidélité est prête avec 1 point offert.\n\nRetrouvez-la ici à tout moment :\n${cardUrl}`;
+        const message = `Bonjour ${prenom} ! 👋\n\nBienvenue chez {{nom}} ! ✨\nVotre carte de fidélité est prête avec 1 point offert.\n\nRetrouvez-la ici :\n${cardUrl}`;
         
-        const waLink = `https://wa.me/${phone.replace('+', '')}?text=${encodeURIComponent(message)}`;
+        const waLink = `https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
 
-        // 5. Action
+        // 5. Ouverture et rechargement
         window.open(waLink, '_blank');
         location.reload();
     }
