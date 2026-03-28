@@ -180,7 +180,7 @@
         
         <div style="margin-top: 20px; padding: 20px; background: #f8fafc; border-radius: 16px; text-align: center;">
             <p style="font-size: 10px; font-weight: 800; margin-bottom: 10px;">QR CODE COMPTOIR</p>
-            <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=https://{{slug}}.onrender.app/signup/{{slug}}" style="width:100px; border-radius: 8px;">
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=https://fidelite-app-n2cz.onrender.com/signup/{{slug}}" style="width:100px; border-radius: 8px;">
         </div>
     </aside>
 
@@ -200,7 +200,7 @@
         
         <div style="margin-top: 20px; padding: 20px; background: #f8fafc; border-radius: 16px; text-align: center;">
             <p style="font-size: 10px; font-weight: 800; margin-bottom: 10px;">QR CODE INSCRIPTION</p>
-            <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://{{slug}}.onrender.app/signup/{{slug}}" style="width:150px; border-radius: 8px;">
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://fidelite-app-n2cz.onrender.com/signup/{{slug}}" style="width:150px; border-radius: 8px;">
         </div>
         
         <a href="/dashboard/{{slug}}/logout" class="nav-link nav-logout" style="margin-top: auto;"><i class="fa-solid fa-power-off"></i> Déconnexion</a>
@@ -327,7 +327,6 @@
     function openPasswordModal() { document.getElementById('passwordModal').style.display = 'flex'; }
     function closePasswordModal() { document.getElementById('passwordModal').style.display = 'none'; }
 
-    // GESTION DU MENU MOBILE (DRAWER)
     function toggleDrawer() {
         document.getElementById('mobileDrawer').classList.toggle('open');
         document.getElementById('drawerOverlay').classList.toggle('open');
