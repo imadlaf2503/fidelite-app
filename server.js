@@ -357,6 +357,13 @@ app.get('/dashboard/:slug', async (req, res) => {
         // --- GÉNÉRATION DES LIGNES AVEC ACTIONS (AVEC OPTION OFFRIR) ---
         const tableRows = (customers || []).map(c => {
             const isReady = c.points >= REWARD_THRESHOLD;
+            
+            // Nettoyage des données pour éviter les erreurs JavaScript (guillemets, undefined)
+            const cleanPrenom = (c.prenom || "").replace(/'/g, "\\'");
+            const cleanNom = (c.nom || "").replace(/'/g, "\\'");
+            const cleanPhone = (c.telephone || "").replace(/'/g, "\\'");
+            const cleanEmail = (c.email || "").replace(/'/g, "\\'");
+
             return `<tr data-id="${c.id}" class="hover:bg-slate-50 transition">
                 <td class="p-4">
                     <div style="font-weight: 800; color:#0f172a">${c.prenom} ${c.nom}</div>
@@ -380,7 +387,9 @@ app.get('/dashboard/:slug', async (req, res) => {
                         
                         <button class="action-btn btn-minus" onclick="updatePoints('${c.id}', -1)" title="Enlever 1 point"><i class="fa-solid fa-minus"></i></button>
                         
-                        <button class="action-btn btn-edit" onclick="openEditModal('${c.id}')" title="Modifier les infos" style="color: var(--primary);">
+                        <button class="action-btn btn-edit" 
+                                onclick="openEditModal('${c.id}', '${cleanPrenom}', '${cleanNom}', '${cleanPhone}', '${cleanEmail}')" 
+                                title="Modifier les infos" style="color: var(--primary);">
                             <i class="fa-solid fa-pen-to-square"></i>
                         </button>
                         
@@ -398,7 +407,7 @@ app.get('/dashboard/:slug', async (req, res) => {
             logo_url: b.config_design.logo_url, 
             slug: b.slug, 
             listClients: tableRows, 
-            threshold: REWARD_THRESHOLD, // <--- AJOUTÉ POUR LE TEMPLATE
+            threshold: REWARD_THRESHOLD,
             nbClients: (customers || []).length, 
             sommePoints: (customers || []).reduce((acc, c) => acc + (c.points || 0), 0),
             auth_token: authToken,

@@ -75,10 +75,9 @@
         .iti { width: 100%; margin-bottom: 16px; }
         .iti__flag-container { border-radius: 12px 0 0 12px; }
 
-        /* --- CACHÉ PAR DÉFAUT (POUR PC) --- */
+        /* --- MOBILE ADAPTATION (MODIFIED TO HIDE ON PC) --- */
         .mobile-nav, .mobile-drawer, .drawer-overlay { display: none; }
 
-        /* --- MOBILE ADAPTATION --- */
         @media (max-width: 992px) {
             .sidebar { display: none; }
             .main-content { margin-left: 0; padding: 15px; padding-bottom: 100px; }
@@ -94,7 +93,7 @@
             .scan-fab { background: var(--primary); color: white; width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-top: -40px; border: 5px solid var(--bg); }
             
             .mobile-drawer { position: fixed; top: 0; right: -100%; width: 80%; height: 100%; background: white; z-index: 2001; transition: 0.3s; padding: 40px 20px; display: flex; flex-direction: column; gap: 10px; }
-            .drawer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2000; }
+            .drawer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2000; display: none; }
         }
     </style>
 </head>
@@ -198,10 +197,12 @@
             <input type="hidden" id="edit_id">
             <input type="text" id="edit_prenom" placeholder="Prénom" class="modal-input" required>
             <input type="text" id="edit_nom" placeholder="Nom" class="modal-input" required>
-            <input type="tel" id="edit_phone" class="modal-input" required>
+            <div style="margin-bottom: 16px;">
+                <input type="tel" id="edit_phone" class="modal-input" style="margin:0;" required>
+            </div>
             <input type="email" id="edit_email" placeholder="Email" class="modal-input">
-            <button type="submit" class="modal-btn">Enregistrer</button>
-            <button type="button" onclick="closeModal('editMemberModal')" style="width: 100%; background: none; border: none; margin-top: 10px; color: var(--text-light);">Annuler</button>
+            <button type="submit" class="modal-btn">Enregistrer les modifications</button>
+            <button type="button" onclick="closeModal('editMemberModal')" style="width: 100%; background: none; border: none; margin-top: 10px; color: var(--text-light); cursor: pointer;">Annuler</button>
         </form>
     </div>
 </div>
@@ -217,7 +218,7 @@
             </div>
             <input type="email" id="add_email" placeholder="Email" class="modal-input">
             <button type="submit" class="modal-btn">Créer le compte</button>
-            <button type="button" onclick="closeModal('addMemberModal')" style="width: 100%; background: none; border: none; margin-top: 10px; color: var(--text-light);">Annuler</button>
+            <button type="button" onclick="closeModal('addMemberModal')" style="width: 100%; background: none; border: none; margin-top: 10px; color: var(--text-light); cursor: pointer;">Annuler</button>
         </form>
     </div>
 </div>
@@ -234,7 +235,7 @@
         preferredCountries: ["fr", "be", "ch"],
         utilsScript: "https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/utils.js"
     });
-    
+
     const phoneInputEdit = window.intlTelInput(document.querySelector("#edit_phone"), {
         initialCountry: "fr",
         preferredCountries: ["fr", "be", "ch"],
@@ -256,6 +257,100 @@
         }
     }
 
+    // OUVRIR MODAL MODIFICATION ET REMPLIR CHAMPS
+  // FONCTION MODIFIER (CORRIGÉE)
+    function openEditModal(id, prenom, nom, tel, email) {
+    // 1. Remplissage des champs de base
+    document.getElementById('edit_id').value = id;
+    document.getElementById('edit_prenom').value = prenom;
+    document.getElementById('edit_nom').value = nom;
+    document.getElementById('edit_email').value = (email && email !== 'undefined' && email !== 'null') ? email : '';
+    
+    // 2. Gestion du téléphone sans crash
+    const phoneField = document.getElementById('edit_phone');
+    if (tel && tel !== 'undefined' && tel !== 'null' && tel !== '') {
+        try {
+            // On essaie de mettre le numéro proprement
+            phoneEdit.setNumber(tel);
+            
+            // Si après setNumber le champ est vide (échec de la lib), 
+            // on force la valeur brute dans l'input
+            if (phoneField.value === "") {
+                phoneField.value = tel;
+            }
+        } catch(e) { 
+            // En cas d'erreur critique de la lib, on écrit juste le texte
+            phoneField.value = tel;
+        }
+    } else {
+        phoneEdit.setNumber("");
+    }
+
+    openModal('editMemberModal');
+}
+
+
+    // SOUMETTRE MODIFICATION CLIENT
+    document.getElementById('editCustomerForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('edit_id').value;
+        const prenom = document.getElementById('edit_prenom').value;
+        const nom = document.getElementById('edit_nom').value;
+        const phone = phoneInputEdit.getNumber();
+        const email = document.getElementById('edit_email').value;
+
+        const { error } = await sb.from('customers').update({ 
+            prenom: prenom, 
+            nom: nom, 
+            telephone: phone, 
+            email: email 
+        }).eq('id', id);
+
+        if (error) {
+            alert("Erreur lors de la modification : " + error.message);
+        } else {
+            location.reload();
+        }
+    };
+
+    // SUPPRIMER CLIENT
+    async function deleteCustomer(id) {
+        if (confirm("Êtes-vous sûr de vouloir supprimer ce client définitivement ?")) {
+            const { error } = await sb.from('customers').delete().eq('id', id);
+            if (error) alert("Erreur suppression : " + error.message);
+            else location.reload();
+        }
+    }
+
+    // AJOUT CLIENT
+    document.getElementById('addCustomerForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const prenom = document.getElementById('add_prenom').value;
+        const nom = document.getElementById('add_nom').value;
+        const phone = phoneInputAdd.getNumber();
+        const email = document.getElementById('add_email').value;
+
+        const { data, error } = await sb.from('customers').insert([
+            { 
+                prenom: prenom, 
+                nom: nom, 
+                telephone: phone, 
+                email: email, 
+                business_id: "{{business_id}}", 
+                points: 1 
+            }
+        ]).select();
+
+        if (error) {
+            alert("Erreur: " + error.message);
+        } else {
+            const msg = encodeURIComponent(`Bonjour ${prenom} ! Bienvenue chez {{nom}}. Votre carte de fidélité est activée avec 1 point ! Suivez vos points ici : https://fidelite-app-n2cz.onrender.com/card/{{slug}}?phone=${phone.replace('+', '')}`);
+            window.open(`https://wa.me/${phone.replace('+', '')}?text=${msg}`, '_blank');
+            location.reload();
+        }
+    };
+
+    // MODIFIER PASS
     document.getElementById('changePasswordForm').onsubmit = async (e) => {
         e.preventDefault();
         const oldPass = document.getElementById('old_pass').value;
@@ -283,15 +378,13 @@
         else { alert("✅ Mis à jour !"); closeModal('passwordModal'); }
     };
 
+    // GESTION POINTS
     async function updatePoints(id, d) {
-        const r = document.querySelector(`tr[data-id="${id}"]`);
-        const v = r.querySelector('.points-val');
-        let n = Math.max(0, parseInt(v.innerText) + d);
-        const { error } = await sb.from('customers').update({ points: n }).eq('id', id);
-        if (!error) { 
-            v.innerText = n; 
-            location.reload(); 
-        }
+        const row = document.querySelector(`tr[data-id="${id}"]`);
+        const pointsVal = row.querySelector('.points-val');
+        let newPoints = Math.max(0, parseInt(pointsVal.innerText) + d);
+        const { error } = await sb.from('customers').update({ points: newPoints }).eq('id', id);
+        if (!error) { location.reload(); }
     }
 
     async function offrirCadeau(id) {
@@ -321,7 +414,6 @@
 
     window.onload = () => {
         chargerHistorique();
-        // Vérification des points pour afficher le bouton OFFRIR au chargement
         document.querySelectorAll('tr[data-id]').forEach(r => {
             const ptsVal = r.querySelector('.points-val');
             if (ptsVal) {
