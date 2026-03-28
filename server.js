@@ -354,7 +354,7 @@ app.get('/dashboard/:slug', async (req, res) => {
         
         const REWARD_THRESHOLD = parseInt(b.points_thresholds) || 10; 
 
-        // --- GÉNÉRATION DES LIGNES AVEC ACTIONS (MISE À JOUR AVEC MODIFICATION) ---
+        // --- GÉNÉRATION DES LIGNES AVEC ACTIONS (AVEC OPTION OFFRIR) ---
         const tableRows = (customers || []).map(c => {
             const isReady = c.points >= REWARD_THRESHOLD;
             return `<tr data-id="${c.id}" class="hover:bg-slate-50 transition">
@@ -369,7 +369,13 @@ app.get('/dashboard/:slug', async (req, res) => {
                     </span>
                 </td>
                 <td class="p-4" style="text-align: right;">
-                    <div style="display:flex; justify-content:flex-end; gap:8px; align-items:center;">
+                    <div style="display:flex; justify-content:flex-end; gap:8px; align-items:center; flex-wrap: wrap;">
+                        
+                        <button class="action-btn btn-gift" onclick="offrirCadeau('${c.id}')" 
+                                style="display: ${isReady ? 'inline-block' : 'none'}; background: #f59e0b; color: white; border:none; padding: 8px 12px; border-radius: 8px; font-weight: 800; font-size: 10px;">
+                            <i class="fa-solid fa-gift"></i> OFFRIR
+                        </button>
+
                         <button class="action-btn btn-plus" onclick="updatePoints('${c.id}', 1)" title="Ajouter 1 point"><i class="fa-solid fa-plus"></i></button>
                         
                         <button class="action-btn btn-minus" onclick="updatePoints('${c.id}', -1)" title="Enlever 1 point"><i class="fa-solid fa-minus"></i></button>
@@ -392,6 +398,7 @@ app.get('/dashboard/:slug', async (req, res) => {
             logo_url: b.config_design.logo_url, 
             slug: b.slug, 
             listClients: tableRows, 
+            threshold: REWARD_THRESHOLD, // <--- AJOUTÉ POUR LE TEMPLATE
             nbClients: (customers || []).length, 
             sommePoints: (customers || []).reduce((acc, c) => acc + (c.points || 0), 0),
             auth_token: authToken,
@@ -496,10 +503,40 @@ app.post('/api/register-customer/:slug', async (req, res) => {
 });
 
 app.get('/my-card/:customer_id', async (req, res) => {
-    const { data: c } = await supabase.from('customers').select('*, business (*)').eq('id', req.params.customer_id).single();
-    if (!c.business.is_active) return res.send("Cette carte est temporairement inactive.");
-    const b = c.business;
-    res.send(render('my-card.html', { nom: b.nom, logo_url: b.config_design.logo_url, prenom: c.prenom, nom_client: c.nom, points: c.points, customer_id: c.id, supabase_url: process.env.SUPABASE_URL, supabase_key: process.env.SUPABASE_KEY, qr_client: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${c.id}`, card_html: b.config_design.card_html, card_css: b.config_design.card_css }));
+    try {
+        const { data: c } = await supabase
+            .from('customers')
+            .select('*, business (*)')
+            .eq('id', req.params.customer_id)
+            .single();
+
+        if (!c || !c.business.is_active) {
+            return res.send("Cette carte est temporairement inactive.");
+        }
+
+        const b = c.business;
+
+        // ON RÉCUPÈRE LE PALIER (ex: 10) DEPUIS LA TABLE BUSINESS
+        const threshold = parseInt(b.points_thresholds) || 10;
+
+        res.send(render('my-card.html', { 
+            nom: b.nom, 
+            logo_url: b.config_design.logo_url, 
+            prenom: c.prenom, 
+            nom_client: c.nom, 
+            points: c.points, 
+            customer_id: c.id, 
+            threshold: threshold, // <--- AJOUTÉ : INDISPENSABLE POUR L'ANIMATION
+            supabase_url: process.env.SUPABASE_URL, 
+            supabase_key: process.env.SUPABASE_KEY, 
+            qr_client: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${c.id}`, 
+            card_html: b.config_design.card_html, 
+            card_css: b.config_design.card_css 
+        }));
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Erreur lors du chargement de la carte.");
+    }
 });
 
 app.post('/api/add-points/:slug', async (req, res) => {

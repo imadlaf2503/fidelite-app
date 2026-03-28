@@ -20,6 +20,7 @@
             --card-bg: #1e293b;   
             --text-main: #ffffff;
             --text-dim: rgba(255, 255, 255, 0.4);
+            --primary: #6366f1;
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -54,12 +55,52 @@
             justify-content: space-between;
             border: 1px solid rgba(255,255,255,0.1);
             animation: cardFadeIn 0.8s ease-out;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden; /* Important pour le shine */
         }
 
         @keyframes cardFadeIn {
             0% { transform: translateY(-20px); opacity: 0; }
             100% { transform: translateY(0); opacity: 1; }
         }
+
+        /* --- NOUVELLES ANIMATIONS --- */
+        
+        /* 1. Animation de passage de lumière (Shine) */
+        .shine-effect::after {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 50%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            transform: skewX(-20deg);
+            animation: shineAnim 0.8s ease-in-out;
+        }
+
+        @keyframes shineAnim {
+            0% { left: -100%; }
+            100% { left: 150%; }
+        }
+
+        /* 2. Animation Pop sur les points */
+        .pop-animation {
+            animation: popAnim 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popAnim {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.3); color: #fbbf24; }
+            100% { transform: scale(1); }
+        }
+
+        /* 3. Animation Carte Dorée (Récompense) */
+        .gold-anim {
+            background: linear-gradient(135deg, #bf953f, #fcf6ba, #b38728, #fbf5b7, #aa771c) !important;
+            box-shadow: 0 0 30px rgba(251, 191, 36, 0.6);
+            transform: scale(1.05);
+        }
+
+        /* -------------------------- */
 
         .card-top {
             display: flex;
@@ -77,6 +118,7 @@
             border-radius: 14px;
             font-weight: 800;
             font-size: 15px;
+            transition: transform 0.3s;
         }
 
         /* --- CENTRE : QR CODE AGRANDI --- */
@@ -131,7 +173,7 @@
             margin-bottom: -5px;
         }
 
-        /* État GOLD (Récompense) */
+        /* État GOLD PERSISTANT (Récompense prête) */
         .is-reward-ready {
             background: linear-gradient(135deg, #fbbf24, #d97706) !important;
             border: none;
@@ -149,9 +191,6 @@
         }
         #splash-screen.hidden { opacity: 0; visibility: hidden; }
         .splash-logo { max-width: 100px; max-height: 80px; object-fit: contain; margin-bottom: 20px; animation: pulse 1.5s infinite; }
-        .splash-text-container { text-align: center; color: #1e293b; }
-        .splash-title { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: #94a3b8; margin-bottom: 5px; }
-        .splash-nom { font-size: 18px; font-weight: 800; color: #0f172a; }
         
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
 
@@ -170,8 +209,8 @@
     <div id="splash-screen">
         <img src="{{logo_url}}" class="splash-logo">
         <div class="splash-text-container">
-            <div class="splash-title">Carte de Fidélité</div>
-            <div class="splash-nom">{{nom}}</div>
+            <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: #94a3b8; text-align: center;">Carte de Fidélité</div>
+            <div style="font-size: 18px; font-weight: 800; color: #0f172a; text-align: center;">{{nom}}</div>
         </div>
         <div style="margin-top: 30px; width: 20px; height: 20px; border: 2px solid #f1f5f9; border-top: 2px solid #1e293b; border-radius: 50%; animation: spin 1s linear infinite;"></div>
     </div>
@@ -214,28 +253,59 @@
         const supabaseKey = "{{supabase_key}}";
         const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
         const customerId = "{{customer_id}}";
+        const threshold = parseInt("{{threshold}}") || 10; // Seuil dynamique par commerçant
         const mainCard = document.getElementById('main-card');
+        const ptsBadge = document.querySelector('.pts');
 
         window.addEventListener('load', () => {
-            setTimeout(() => document.getElementById('splash-screen').classList.add('hidden'), 3000);
+            setTimeout(() => document.getElementById('splash-screen').classList.add('hidden'), 2500);
         });
 
+        // Fonction pour gérer l'apparence selon les points
         function checkPointsLevel(pts) {
-            if (pts >= 10) mainCard.classList.add('is-reward-ready');
-            else mainCard.classList.remove('is-reward-ready');
+            if (pts >= threshold) {
+                mainCard.classList.add('is-reward-ready');
+            } else {
+                mainCard.classList.remove('is-reward-ready');
+            }
         }
 
-        _supabase.channel('any').on('postgres_changes', { 
+        // Animation complète lors d'un scan (Temps réel)
+        function triggerScanAnimations(newPts) {
+            // 1. Flash de lumière (Shine)
+            mainCard.classList.add('shine-effect');
+            setTimeout(() => mainCard.classList.remove('shine-effect'), 800);
+
+            // 2. Pop sur le badge de points
+            ptsBadge.innerText = `${newPts} PTS`;
+            ptsBadge.classList.add('pop-animation');
+            setTimeout(() => ptsBadge.classList.remove('pop-animation'), 500);
+
+            // 3. Si SEUIL ATTEINT -> Animation Dorée Spéciale
+            if (newPts >= threshold) {
+                mainCard.classList.add('gold-anim');
+                setTimeout(() => {
+                    mainCard.classList.remove('gold-anim');
+                    checkPointsLevel(newPts); // Appliquer le style permanent
+                }, 2000); // L'animation dorée dure 2 sec avant de se stabiliser
+            } else {
+                checkPointsLevel(newPts);
+            }
+        }
+
+        // Ecouteur temps réel Supabase
+        _supabase.channel('custom-filter-channel')
+        .on('postgres_changes', { 
             event: 'UPDATE', schema: 'public', table: 'customers', filter: `id=eq.${customerId}` 
         }, payload => {
             const newPoints = payload.new.points;
-            document.querySelector('.pts').innerText = `${newPoints} PTS`;
-            checkPointsLevel(newPoints);
+            triggerScanAnimations(newPoints);
         }).subscribe();
 
+        // Init au chargement
         window.onload = () => checkPointsLevel(parseInt("{{points}}"));
 
-        if (!window.navigator.standalone) {
+        if (!window.navigator.standalone && /iPhone|iPad|iPod/.test(navigator.userAgent)) {
             setTimeout(() => document.getElementById('install-prompt').style.display = 'block', 4500);
         }
     </script>

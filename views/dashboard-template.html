@@ -18,7 +18,7 @@
 
         .app-wrapper { display: flex; min-height: 100vh; }
 
-        /* --- SIDEBAR --- */
+        /* --- SIDEBAR PC --- */
         .sidebar {
             width: var(--sidebar-width); background: white; border-right: 1px solid var(--border);
             display: flex; flex-direction: column; padding: 32px 24px; position: fixed; height: 100vh; z-index: 100;
@@ -54,14 +54,16 @@
         td { padding: 16px 12px; border-bottom: 1px solid #f8fafc; font-size: 14px; }
 
         .points-pill { background: #eef2ff; color: var(--primary); padding: 6px 12px; border-radius: 8px; font-weight: 800; }
-        .points-pill.ready { background: var(--warning); color: white; }
+        .points-pill.ready { background: var(--warning); color: white; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
 
         /* --- ACTIONS --- */
-        .action-btn { border: none; background: #f1f5f9; padding: 8px; border-radius: 8px; cursor: pointer; transition: 0.2s; color: var(--text); margin-left: 4px; }
+        .action-btn { border: none; background: #f1f5f9; padding: 10px; border-radius: 10px; cursor: pointer; transition: 0.2s; color: var(--text); margin-left: 4px; }
         .btn-plus { color: var(--success); }
         .btn-minus { color: var(--warning); }
         .btn-edit { color: var(--primary); }
         .btn-del { color: var(--danger); }
+        .btn-gift { background: var(--warning); color: white; font-weight: 800; font-size: 10px; text-transform: uppercase; display: none; padding: 8px 12px; border-radius: 8px; }
         .action-btn:hover { transform: scale(1.1); }
 
         /* --- MODALS --- */
@@ -73,12 +75,26 @@
         .iti { width: 100%; margin-bottom: 16px; }
         .iti__flag-container { border-radius: 12px 0 0 12px; }
 
+        /* --- CACHÉ PAR DÉFAUT (POUR PC) --- */
+        .mobile-nav, .mobile-drawer, .drawer-overlay { display: none; }
+
+        /* --- MOBILE ADAPTATION --- */
         @media (max-width: 992px) {
             .sidebar { display: none; }
-            .main-content { margin-left: 0; padding: 20px; padding-bottom: 100px; }
+            .main-content { margin-left: 0; padding: 15px; padding-bottom: 100px; }
+            .header-flex { flex-direction: column; gap: 15px; }
+            
+            table thead { display: none; }
+            table tr { display: block; background: #fff; border: 1px solid var(--border); border-radius: 16px; margin-bottom: 15px; padding: 15px; position: relative; }
+            table td { display: block; border: none; padding: 5px 0; text-align: left; }
+            table td:last-child { margin-top: 10px; padding-top: 15px; border-top: 1px solid #f1f5f9; }
+            
             .mobile-nav { display: flex; position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid var(--border); padding: 12px; justify-content: space-around; z-index: 1000; }
             .mobile-link { display: flex; flex-direction: column; align-items: center; color: var(--text-light); text-decoration: none; font-size: 10px; background: none; border: none; }
             .scan-fab { background: var(--primary); color: white; width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-top: -40px; border: 5px solid var(--bg); }
+            
+            .mobile-drawer { position: fixed; top: 0; right: -100%; width: 80%; height: 100%; background: white; z-index: 2001; transition: 0.3s; padding: 40px 20px; display: flex; flex-direction: column; gap: 10px; }
+            .drawer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2000; }
         }
     </style>
 </head>
@@ -91,7 +107,7 @@
             <a href="#" class="nav-link active"><i class="fa-solid fa-house"></i> Accueil</a>
             <a href="/scanner/{{slug}}?auth={{auth_token}}" class="nav-link"><i class="fa-solid fa-qrcode"></i> Scanner</a>
             <button onclick="openModal('addMemberModal')" class="nav-link"><i class="fa-solid fa-user-plus"></i> Nouveau Membre</button>
-            <button onclick="openModal('passwordModal')" class="nav-link"><i class="fa-solid fa-lock"></i> Sécurité ID</button>
+            <button onclick="openModal('passwordModal')" class="nav-link"><i class="fa-solid fa-lock"></i> Modifier mot de passe</button>
             <a href="/dashboard/{{slug}}/logout" class="nav-link nav-logout"><i class="fa-solid fa-power-off"></i> Déconnexion</a>
         </nav>
         <div style="margin-top: 20px; padding: 20px; background: #f8fafc; border-radius: 16px; text-align: center;">
@@ -107,11 +123,17 @@
     </nav>
 
     <div class="drawer-overlay" id="drawerOverlay" onclick="toggleDrawer()"></div>
+    
     <div class="mobile-drawer" id="mobileDrawer">
-        <button onclick="toggleDrawer()" style="background: none; border: none; font-size: 20px; position: absolute; top: 20px; right: 20px;"><i class="fa-solid fa-xmark"></i></button>
-        <h3 style="font-weight: 800; margin: 0;">Menu</h3>
+        <h3 style="font-weight: 800; margin-bottom: 20px; padding-top: 10px;">Menu</h3>
         <button onclick="openModal('addMemberModal'); toggleDrawer();" class="nav-link"><i class="fa-solid fa-user-plus"></i> Nouveau Membre</button>
-        <button onclick="openModal('passwordModal'); toggleDrawer();" class="nav-link"><i class="fa-solid fa-lock"></i> Sécurité ID</button>
+        <button onclick="openModal('passwordModal'); toggleDrawer();" class="nav-link"><i class="fa-solid fa-lock"></i> Modifier mot de passe</button>
+        
+        <div style="margin-top: 20px; padding: 15px; background: #f1f5f9; border-radius: 16px; text-align: center;">
+            <p style="font-size: 10px; font-weight: 800; margin-bottom: 10px; color: var(--text-light);">QR CODE INSCRIPTION</p>
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=https://fidelite-app-n2cz.onrender.com/signup/{{slug}}" style="width:120px; border-radius: 8px;">
+        </div>
+
         <a href="/dashboard/{{slug}}/logout" class="nav-link nav-logout" style="margin-top: auto;"><i class="fa-solid fa-power-off"></i> Déconnexion</a>
     </div>
 
@@ -139,7 +161,7 @@
                 <h3 class="section-title" style="margin:0;">Membres Fidélité</h3>
                 <div style="position: relative; flex: 1; max-width: 300px;">
                     <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-light);"></i>
-                    <input type="text" id="searchInput" onkeyup="searchMember()" placeholder="Rechercher (Nom, Tel...)" style="width: 100%; padding: 10px 10px 10px 35px; border-radius: 12px; border: 1px solid var(--border); outline: none;">
+                    <input type="text" id="searchInput" onkeyup="searchMember()" placeholder="Rechercher..." style="width: 100%; padding: 10px 10px 10px 35px; border-radius: 12px; border: 1px solid var(--border); outline: none;">
                 </div>
             </div>
             <div class="table-container">
@@ -154,16 +176,17 @@
     </main>
 </div>
 
-<div id="addMemberModal" class="modal">
+<div id="passwordModal" class="modal">
     <div class="modal-box">
-        <h3 style="margin:0 0 20px; font-weight: 800;">Ajouter un Membre</h3>
-        <form id="addCustomerForm">
-            <input type="text" id="add_prenom" placeholder="Prénom" class="modal-input" required>
-            <input type="text" id="add_nom" placeholder="Nom" class="modal-input" required>
-            <input type="tel" id="add_phone" class="modal-input" required>
-            <input type="email" id="add_email" placeholder="Email" class="modal-input">
-            <button type="submit" class="modal-btn">Enregistrer le client</button>
-            <button type="button" onclick="closeModal('addMemberModal')" style="width: 100%; background: none; border: none; margin-top: 10px; color: var(--text-light); cursor: pointer;">Annuler</button>
+        <h3 style="margin:0 0 10px; font-weight: 800;">Modifier mon mot de passe</h3>
+        <p style="font-size: 12px; color: var(--text-light); margin-bottom: 20px;">Confirmez vos accès.</p>
+        <form id="changePasswordForm">
+            <input type="password" id="old_pass" placeholder="Ancien mot de passe" class="modal-input" required>
+            <input type="password" id="new_pass" placeholder="Nouveau mot de passe" class="modal-input" required>
+            <input type="password" id="confirm_pass" placeholder="Confirmer nouveau" class="modal-input" required>
+            <div id="passError" style="color: var(--danger); font-size: 12px; margin-bottom: 10px; display: none;"></div>
+            <button type="submit" class="modal-btn">Mettre à jour</button>
+            <button type="button" onclick="closeModal('passwordModal')" style="width: 100%; background: none; border: none; margin-top: 10px; color: var(--text-light); cursor: pointer;">Annuler</button>
         </form>
     </div>
 </div>
@@ -173,120 +196,113 @@
         <h3 style="margin:0 0 20px; font-weight: 800;">Modifier le Membre</h3>
         <form id="editCustomerForm">
             <input type="hidden" id="edit_id">
-            <label style="font-size: 11px; font-weight: 700;">PRÉNOM</label>
-            <input type="text" id="edit_prenom" class="modal-input" required>
-            <label style="font-size: 11px; font-weight: 700;">NOM</label>
-            <input type="text" id="edit_nom" class="modal-input" required>
-            <label style="font-size: 11px; font-weight: 700;">TÉLÉPHONE</label>
+            <input type="text" id="edit_prenom" placeholder="Prénom" class="modal-input" required>
+            <input type="text" id="edit_nom" placeholder="Nom" class="modal-input" required>
             <input type="tel" id="edit_phone" class="modal-input" required>
-            <label style="font-size: 11px; font-weight: 700;">EMAIL</label>
-            <input type="email" id="edit_email" class="modal-input">
-            <button type="submit" class="modal-btn" style="background: var(--primary);">Mettre à jour</button>
-            <button type="button" onclick="closeModal('editMemberModal')" style="width: 100%; background: none; border: none; margin-top: 10px; color: var(--text-light); cursor: pointer;">Annuler</button>
+            <input type="email" id="edit_email" placeholder="Email" class="modal-input">
+            <button type="submit" class="modal-btn">Enregistrer</button>
+            <button type="button" onclick="closeModal('editMemberModal')" style="width: 100%; background: none; border: none; margin-top: 10px; color: var(--text-light);">Annuler</button>
         </form>
     </div>
 </div>
 
-<div id="shareModal" class="modal">
-    <div class="modal-box" style="text-align: center;">
-        <i class="fa-solid fa-circle-check" style="font-size: 50px; color: var(--success); margin-bottom: 15px;"></i>
-        <h3 style="margin:0;">Succès !</h3>
-        <p style="color: var(--text-light); font-size: 14px; margin-bottom: 20px;">Envoyez la carte au client :</p>
-        <a id="whatsappBtn" href="#" target="_blank" class="modal-btn" style="background: #25D366; text-decoration: none; display: block;"><i class="fa-brands fa-whatsapp"></i> WhatsApp</a>
-        <button onclick="location.reload()" style="width: 100%; background: none; border: none; margin-top: 15px; color: var(--text-light); cursor: pointer;">Fermer</button>
+<div id="addMemberModal" class="modal">
+    <div class="modal-box">
+        <h3 style="margin:0 0 20px; font-weight: 800;">Nouveau Membre</h3>
+        <form id="addCustomerForm">
+            <input type="text" id="add_prenom" placeholder="Prénom" class="modal-input" required>
+            <input type="text" id="add_nom" placeholder="Nom" class="modal-input" required>
+            <div style="margin-bottom: 16px;">
+                <input type="tel" id="add_phone" class="modal-input" style="margin:0;" required>
+            </div>
+            <input type="email" id="add_email" placeholder="Email" class="modal-input">
+            <button type="submit" class="modal-btn">Créer le compte</button>
+            <button type="button" onclick="closeModal('addMemberModal')" style="width: 100%; background: none; border: none; margin-top: 10px; color: var(--text-light);">Annuler</button>
+        </form>
     </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/intlTelInput.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <script>
     const sb = window.supabase.createClient('{{supabase_url}}', '{{supabase_key}}');
+    const threshold = {{threshold}};
 
-    let itiAdd, itiEdit;
-    window.addEventListener('DOMContentLoaded', () => {
-        itiAdd = window.intlTelInput(document.querySelector("#add_phone"), { initialCountry: "fr", separateDialCode: true, utilsScript: "https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/utils.js" });
-        itiEdit = window.intlTelInput(document.querySelector("#edit_phone"), { initialCountry: "fr", separateDialCode: true, utilsScript: "https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/utils.js" });
+    const phoneInputAdd = window.intlTelInput(document.querySelector("#add_phone"), {
+        initialCountry: "fr",
+        preferredCountries: ["fr", "be", "ch"],
+        utilsScript: "https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/utils.js"
     });
-
-    document.getElementById('currentDate').innerText = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
+    
+    const phoneInputEdit = window.intlTelInput(document.querySelector("#edit_phone"), {
+        initialCountry: "fr",
+        preferredCountries: ["fr", "be", "ch"],
+        utilsScript: "https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/utils.js"
+    });
 
     function openModal(id) { document.getElementById(id).style.display = 'flex'; }
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-    function toggleDrawer() { document.getElementById('mobileDrawer').style.right = document.getElementById('mobileDrawer').style.right === '0px' ? '-100%' : '0px'; }
-
-    // --- FONCTION MODIFIER (RECUPERER DATA) ---
-    async function openEditModal(id) {
-        const { data: c, error } = await sb.from('customers').select('*').eq('id', id).single();
-        if (error) return alert("Erreur de récupération");
-        
-        document.getElementById('edit_id').value = c.id;
-        document.getElementById('edit_prenom').value = c.prenom;
-        document.getElementById('edit_nom').value = c.nom;
-        document.getElementById('edit_email').value = c.email || '';
-        itiEdit.setNumber(c.telephone || '');
-        
-        openModal('editMemberModal');
+    
+    function toggleDrawer() { 
+        const d = document.getElementById('mobileDrawer');
+        const o = document.getElementById('drawerOverlay');
+        if(d.style.right === '0px') { 
+            d.style.right = '-100%'; 
+            o.style.display = 'none'; 
+        } else { 
+            d.style.right = '0px'; 
+            o.style.display = 'block'; 
+        }
     }
 
-    // --- SOUMISSION MODIFICATION ---
-    document.getElementById('editCustomerForm').onsubmit = async (e) => {
+    document.getElementById('changePasswordForm').onsubmit = async (e) => {
         e.preventDefault();
-        const id = document.getElementById('edit_id').value;
-        const phoneFull = itiEdit.getNumber();
+        const oldPass = document.getElementById('old_pass').value;
+        const newPass = document.getElementById('new_pass').value;
+        const confirmPass = document.getElementById('confirm_pass').value;
+        const errorDiv = document.getElementById('passError');
 
-        const updates = {
-            prenom: document.getElementById('edit_prenom').value,
-            nom: document.getElementById('edit_nom').value,
-            telephone: phoneFull,
-            email: document.getElementById('edit_email').value
-        };
+        if (newPass !== confirmPass) {
+            errorDiv.innerText = "❌ Incohérence nouveaux mots de passe.";
+            errorDiv.style.display = "block"; return;
+        }
 
-        const { error } = await sb.from('customers').update(updates).eq('id', id);
-        if (error) return alert("Erreur lors de la mise à jour");
-        
-        alert("Client mis à jour !");
-        location.reload();
+        const { data: { user } } = await sb.auth.getUser();
+        const { error: signInError } = await sb.auth.signInWithPassword({
+            email: user.email, password: oldPass
+        });
+
+        if (signInError) {
+            errorDiv.innerText = "❌ Ancien mot de passe incorrect.";
+            errorDiv.style.display = "block"; return;
+        }
+
+        const { error: updateError } = await sb.auth.updateUser({ password: newPass });
+        if (updateError) { alert(updateError.message); } 
+        else { alert("✅ Mis à jour !"); closeModal('passwordModal'); }
     };
-
-    // AJOUT CLIENT
-    document.getElementById('addCustomerForm').onsubmit = async (e) => {
-        e.preventDefault();
-        const phoneFull = itiAdd.getNumber();
-        const { data, error } = await sb.from('customers').insert([{ 
-            business_id: "{{business_id}}", 
-            prenom: document.getElementById('add_prenom').value, 
-            nom: document.getElementById('add_nom').value, 
-            telephone: phoneFull, 
-            email: document.getElementById('add_email').value, 
-            points: 0 
-        }]).select().single();
-
-        if (error) return alert("Erreur d'enregistrement");
-        
-        const cardLink = `https://fidelite-app-n2cz.onrender.com/my-card/${data.id}`;
-        const message = `Bonjour ${data.prenom} ! Voici votre carte : ${cardLink}`;
-        document.getElementById('whatsappBtn').href = `https://wa.me/${phoneFull.replace('+', '')}?text=${encodeURIComponent(message)}`;
-        closeModal('addMemberModal'); openModal('shareModal');
-    };
-
-    // RECHERCHE & ACTIONS TABLEAU
-    function searchMember() {
-        const f = document.getElementById("searchInput").value.toLowerCase();
-        document.querySelectorAll("#membersTable tbody tr").forEach(r => r.style.display = r.textContent.toLowerCase().includes(f) ? "" : "none");
-    }
 
     async function updatePoints(id, d) {
         const r = document.querySelector(`tr[data-id="${id}"]`);
         const v = r.querySelector('.points-val');
         let n = Math.max(0, parseInt(v.innerText) + d);
         const { error } = await sb.from('customers').update({ points: n }).eq('id', id);
-        if (!error) { v.innerText = n; r.querySelector('.points-pill').classList.toggle('ready', n >= 10); }
+        if (!error) { 
+            v.innerText = n; 
+            location.reload(); 
+        }
     }
 
-    async function deleteCustomer(id) {
-        if (confirm("Supprimer définitivement ?")) {
-            const { error } = await sb.from('customers').delete().eq('id', id);
-            if (!error) document.querySelector(`tr[data-id="${id}"]`).remove();
+    async function offrirCadeau(id) {
+        if(confirm("Confirmer l'utilisation de la récompense ? Le compteur reviendra à 0.")) {
+            const { error } = await sb.from('customers').update({ points: 0 }).eq('id', id);
+            if(!error) {
+                alert("Récompense validée !");
+                location.reload();
+            } else {
+                alert("Erreur : " + error.message);
+            }
         }
     }
 
@@ -295,10 +311,31 @@
         const container = document.getElementById('scansList');
         if (scans && scans.length > 0) {
             container.innerHTML = scans.map(s => `<div style="display:flex; justify-content:space-between; padding:12px; background:#f8fafc; border-radius:12px; margin-bottom:8px;"><div><div style="font-weight:700;">${s.client_nom}</div><div style="font-size:11px;">${new Date(s.created_at).toLocaleTimeString()}</div></div><div style="color:var(--success); font-weight:800;">+1 PT</div></div>`).join('');
-        } else { container.innerHTML = '<p style="font-size:13px;">Aucun scan.</p>'; }
+        } else { container.innerHTML = '<p style="font-size:13px;">Aucun scan récent.</p>'; }
     }
 
-    window.onload = chargerHistorique;
+    function searchMember() {
+        const f = document.getElementById("searchInput").value.toLowerCase();
+        document.querySelectorAll("#membersTable tbody tr").forEach(r => r.style.display = r.textContent.toLowerCase().includes(f) ? "" : "none");
+    }
+
+    window.onload = () => {
+        chargerHistorique();
+        // Vérification des points pour afficher le bouton OFFRIR au chargement
+        document.querySelectorAll('tr[data-id]').forEach(r => {
+            const ptsVal = r.querySelector('.points-val');
+            if (ptsVal) {
+                const pts = parseInt(ptsVal.innerText);
+                if(pts >= threshold) {
+                    const pill = r.querySelector('.points-pill');
+                    if(pill) pill.classList.add('ready');
+                    const btn = r.querySelector('.btn-gift');
+                    if(btn) btn.style.display = 'inline-block';
+                }
+            }
+        });
+        document.getElementById('currentDate').innerText = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
+    };
 </script>
 </body>
 </html>
