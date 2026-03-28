@@ -329,7 +329,6 @@ app.get('/dashboard/:slug', async (req, res) => {
         }
 
         // --- NOUVEAU : SÉCURITÉ PAIEMENT ---
-        // On bloque l'accès si ce n'est pas payé, MAIS on laisse passer l'Admin
         const estPaye = b.statut && b.statut.toLowerCase() === 'payé';
         
         if (!estPaye && !isAdmin) {
@@ -349,40 +348,55 @@ app.get('/dashboard/:slug', async (req, res) => {
                 </div>
             `);
         }
-        // ----------------------------------
 
         // 4. Si OK (Payé ou Admin), on charge les données des clients
         const { data: customers } = await supabase.from('customers').select('*').eq('business_id', b.id).order('created_at', { ascending: false });
         
-        // On récupère le premier palier pour l'affichage (ex: 10)
         const REWARD_THRESHOLD = parseInt(b.points_thresholds) || 10; 
 
+        // --- GÉNÉRATION DES LIGNES AVEC ACTIONS (MISE À JOUR AVEC MODIFICATION) ---
         const tableRows = (customers || []).map(c => {
             const isReady = c.points >= REWARD_THRESHOLD;
-            return `<tr class="hover:bg-slate-50 transition">
-                <td class="p-4"><div style="font-weight: 800; color:#0f172a">${c.prenom} ${c.nom}</div></td>
-                <td class="p-4">${c.email}</td>
-                <td class="p-4"><span class="points-tag ${isReady ? 'reward-ready' : ''}">${c.points} PTS</span></td>
+            return `<tr data-id="${c.id}" class="hover:bg-slate-50 transition">
+                <td class="p-4">
+                    <div style="font-weight: 800; color:#0f172a">${c.prenom} ${c.nom}</div>
+                    <div style="font-size:10px; color:#64748b;">${c.email || ''}</div>
+                </td>
+                <td class="p-4" style="font-family: monospace;">${c.telephone || 'N/A'}</td>
+                <td class="p-4">
+                    <span class="points-pill ${isReady ? 'ready' : ''}">
+                        <span class="points-val">${c.points}</span> PTS
+                    </span>
+                </td>
                 <td class="p-4" style="text-align: right;">
-                    <div style="display:flex; justify-content:flex-end; gap:15px; align-items:center;">
-                        ${isReady ? `<form action="/api/reset-points/${c.id}?auth=${authToken}" method="POST" style="margin:0"><button type="submit" class="btn-reset">Offrir</button></form>` : ''}
-                        <a href="/my-card/${c.id}" target="_blank" style="color: #6366f1; font-size:18px;"><i class="fa-solid fa-eye"></i></a>
+                    <div style="display:flex; justify-content:flex-end; gap:8px; align-items:center;">
+                        <button class="action-btn btn-plus" onclick="updatePoints('${c.id}', 1)" title="Ajouter 1 point"><i class="fa-solid fa-plus"></i></button>
+                        
+                        <button class="action-btn btn-minus" onclick="updatePoints('${c.id}', -1)" title="Enlever 1 point"><i class="fa-solid fa-minus"></i></button>
+                        
+                        <button class="action-btn btn-edit" onclick="openEditModal('${c.id}')" title="Modifier les infos" style="color: var(--primary);">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                        </button>
+                        
+                        <a href="/my-card/${c.id}" target="_blank" class="action-btn" style="color: #6366f1;" title="Voir la carte"><i class="fa-solid fa-eye"></i></a>
+                        
+                        <button class="action-btn btn-del" onclick="deleteCustomer('${c.id}')" title="Supprimer"><i class="fa-solid fa-trash"></i></button>
                     </div>
                 </td>
             </tr>`;
         }).join('');
 
         res.send(render('dashboard-template.html', { 
-            business_id: b.id,  // <--- AJOUTE CETTE LIGNE ICI
+            business_id: b.id,
             nom: b.nom, 
             logo_url: b.config_design.logo_url, 
             slug: b.slug, 
             listClients: tableRows, 
-            nbClients: customers.length, 
+            nbClients: (customers || []).length, 
             sommePoints: (customers || []).reduce((acc, c) => acc + (c.points || 0), 0),
-            auth_token: authToken ,
-            supabase_url: process.env.SUPABASE_URL ,// <--- AJOUTE ÇA
-            supabase_key: process.env.SUPABASE_KEY  // <--- AJOUTE ÇA
+            auth_token: authToken,
+            supabase_url: process.env.SUPABASE_URL,
+            supabase_key: process.env.SUPABASE_KEY
         }));
 
     } catch (e) { 
@@ -747,6 +761,57 @@ app.post('/api/toggle-maintenance/:id', async (req, res) => {
         if (error) throw error;
         res.redirect(`/admin/inventory?auth=${token}`); // On repart à l'inventaire avec le badge
     } catch (err) { res.status(500).send(err.message); }
+});
+app.post('/api/add-customer', async (req, res) => {
+    try {
+        const { business_id, nom, prenom, telephone, email } = req.body;
+
+        const { data, error } = await supabase
+            .from('customers')
+            .insert([{ 
+                business_id, 
+                nom, 
+                prenom, 
+                telephone, 
+                email, 
+                points: 0 
+            }])
+            .select()
+            .single();
+
+        if (error) throw error;
+        res.json(data); // On renvoie les infos pour que le HTML génère le lien WhatsApp
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+app.post('/api/update-points', async (req, res) => {
+    try {
+        const { customer_id, new_points } = req.body;
+
+        const { error } = await supabase
+            .from('customers')
+            .update({ points: new_points })
+            .eq('id', customer_id);
+
+        if (error) throw error;
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+app.delete('/api/delete-customer/:id', async (req, res) => {
+    try {
+        const { error } = await supabase
+            .from('customers')
+            .delete()
+            .eq('id', req.params.id);
+
+        if (error) throw error;
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 app.get('/', (req, res) => res.redirect('/admin/inventory'));
 app.listen(3000, () => console.log(`🚀 http://localhost:3000`));
