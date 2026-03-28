@@ -230,28 +230,28 @@
     const sb = window.supabase.createClient('{{supabase_url}}', '{{supabase_key}}');
     const threshold = {{threshold}};
     // Dans la partie initialisation
-    const phoneAdd = window.intlTelInput(document.querySelector("#add_phone"), { 
-        initialCountry: "fr", 
-        utilsScript: "https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/utils.js" 
-    });
+    // Remplace tes initialisations par celles-ci
+        // Initialisation pour l'AJOUT
+const phoneAdd = window.intlTelInput(document.querySelector("#add_phone"), {
+    initialCountry: "auto",
+    separateDialCode: true, // Affiche l'indicatif (+213, +33...) à côté du drapeau
+    geoIpLookup: function(success, failure) {
+        fetch("https://ipapi.co/json")
+            .then(res => res.json())
+            .then(data => success(data.country_code))
+            .catch(() => success("fr"));
+    },
+    utilsScript: "https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/utils.js"
+});
 
-    const phoneEdit = window.intlTelInput(document.querySelector("#edit_phone"), { 
-        initialCountry: "fr", 
-        utilsScript: "https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/utils.js" 
-    });
+// Initialisation pour la MODIFICATION
+const phoneEdit = window.intlTelInput(document.querySelector("#edit_phone"), {
+    initialCountry: "auto",
+    separateDialCode: true,
+    utilsScript: "https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/utils.js"
+});
 
-    const phoneInputAdd = window.intlTelInput(document.querySelector("#add_phone"), {
-        initialCountry: "fr",
-        preferredCountries: ["fr", "be", "ch"],
-        utilsScript: "https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/utils.js"
-    });
-
-    const phoneInputEdit = window.intlTelInput(document.querySelector("#edit_phone"), {
-        initialCountry: "fr",
-        preferredCountries: ["fr", "be", "ch"],
-        utilsScript: "https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/utils.js"
-    });
-
+    
     function openModal(id) { document.getElementById(id).style.display = 'flex'; }
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
     
@@ -336,24 +336,30 @@
 document.getElementById('addCustomerForm').onsubmit = async (e) => {
     e.preventDefault();
     
-    // On récupère les valeurs
     const prenom = document.getElementById('add_prenom').value;
     const nom = document.getElementById('add_nom').value;
     const email = document.getElementById('add_email').value;
 
-    // Vérification de sécurité pour le téléphone
+    // Vérification si la lib est bien chargée
     if (!phoneAdd) {
         alert("Erreur d'initialisation du champ téléphone.");
         return;
     }
 
-    const phone = phoneAdd.getNumber(); // Récupère le format +33...
+    // getNumber() récupère le format international complet (ex: +213555123456)
+    const phone = phoneAdd.getNumber(); 
 
-    // 1. Insertion dans Supabase avec .select() pour avoir le nouvel ID
+    // Vérification de la validité du numéro
+    if (!phoneAdd.isValidNumber()) {
+        alert("Le numéro de téléphone n'est pas valide pour le pays sélectionné.");
+        return;
+    }
+
+    // 1. Insertion dans Supabase avec .select()
     const { data, error } = await sb.from('customers').insert([{
         prenom: prenom,
         nom: nom,
-        telephone: phone,
+        telephone: phone, // On enregistre le format +213... en base
         email: email,
         business_id: "{{business_id}}",
         points: 1
@@ -362,18 +368,17 @@ document.getElementById('addCustomerForm').onsubmit = async (e) => {
     if (error) {
         alert("Erreur Supabase : " + error.message);
     } else if (data && data.length > 0) {
-        // 2. Récupération de l'ID du nouveau client
         const newCustomerId = data[0].id;
-
-        // 3. Construction du lien recommandé (/my-card/ID)
         const cardUrl = `https://fidelite-app-n2cz.onrender.com/my-card/${newCustomerId}`;
         
-        // 4. Préparation du message WhatsApp
         const message = `Bonjour ${prenom} ! 👋\n\nBienvenue chez {{nom}} ! ✨\nVotre carte de fidélité est prête avec 1 point offert.\n\nRetrouvez-la ici :\n${cardUrl}`;
         
-        const waLink = `https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
+        // On nettoie le numéro pour WhatsApp : on garde uniquement les chiffres (ex: 213555...)
+        const cleanWhatsAppNumber = phone.replace(/\D/g, ''); 
+        
+        const waLink = `https://wa.me/${cleanWhatsAppNumber}?text=${encodeURIComponent(message)}`;
 
-        // 5. Ouverture et rechargement
+        // 2. Ouverture WhatsApp et rechargement de la page
         window.open(waLink, '_blank');
         location.reload();
     }
