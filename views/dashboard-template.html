@@ -25,6 +25,7 @@
             background: var(--bg); 
             color: var(--text);
             line-height: 1.5;
+            overflow-x: hidden;
         }
 
         /* --- LAYOUT PRINCIPAL --- */
@@ -52,11 +53,12 @@
             padding: 12px 16px; border-radius: 12px;
             color: var(--text-light); text-decoration: none;
             font-weight: 600; font-size: 14px; transition: 0.2s;
+            background: none; border: none; width: 100%; text-align: left; cursor: pointer;
         }
         .nav-link:hover { background: #f1f5f9; color: var(--text); }
         .nav-link.active { background: var(--primary); color: white; }
 
-        .nav-logout { color: var(--danger); margin-top: auto; border-top: 1px solid var(--border); pt-20; }
+        .nav-logout { color: var(--danger); margin-top: auto; border-top: 1px solid var(--border); padding-top: 20px; }
 
         /* --- CONTENU --- */
         .main-content {
@@ -110,6 +112,20 @@
         /* --- MOBILE NAVIGATION (Bottom Bar) --- */
         .mobile-nav { display: none; }
 
+        /* --- MOBILE MENU (Drawer) --- */
+        .mobile-drawer {
+            position: fixed; top: 0; right: -100%; width: 80%; max-width: 300px; height: 100vh;
+            background: white; z-index: 2000; padding: 40px 24px;
+            box-shadow: -4px 0 12px rgba(0,0,0,0.1); transition: 0.3s;
+            display: flex; flex-direction: column; gap: 20px;
+        }
+        .mobile-drawer.open { right: 0; }
+        .drawer-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1999; display: none;
+        }
+        .drawer-overlay.open { display: block; }
+        .drawer-close { background: none; border: none; font-size: 20px; color: var(--text-light); cursor: pointer; position: absolute; top: 20px; right: 20px; }
+
         /* --- RESPONSIVE --- */
         @media (max-width: 992px) {
             .sidebar { display: none; }
@@ -125,6 +141,7 @@
             .mobile-link { 
                 display: flex; flex-direction: column; align-items: center; 
                 gap: 4px; color: var(--text-light); text-decoration: none; font-size: 10px; font-weight: 700;
+                background: none; border: none; cursor: pointer;
             }
             .mobile-link.active { color: var(--primary); }
             .mobile-link i { font-size: 20px; }
@@ -140,7 +157,7 @@
         /* --- MODAL --- */
         #passwordModal {
             position: fixed; inset: 0; background: rgba(0,0,0,0.5);
-            backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 2000;
+            backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 3000;
         }
         .modal-box { background: white; width: 90%; max-width: 400px; padding: 32px; border-radius: 24px; }
         .modal-input { width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--border); margin: 8px 0 16px; outline: none; }
@@ -157,7 +174,7 @@
         <nav class="nav-menu">
             <a href="#" class="nav-link active"><i class="fa-solid fa-house"></i> Accueil</a>
             <a href="/scanner/{{slug}}?auth={{auth_token}}" class="nav-link"><i class="fa-solid fa-qrcode"></i> Scanner</a>
-            <button onclick="openPasswordModal()" class="nav-link" style="background:none; border:none; width:100%; cursor:pointer;"><i class="fa-solid fa-lock"></i> Sécurité ID</button>
+            <button onclick="openPasswordModal()" class="nav-link"><i class="fa-solid fa-lock"></i> Sécurité ID</button>
             <a href="/dashboard/{{slug}}/logout" class="nav-link nav-logout"><i class="fa-solid fa-power-off"></i> Déconnexion</a>
         </nav>
         
@@ -170,8 +187,24 @@
     <nav class="mobile-nav">
         <a href="#" class="mobile-link active"><i class="fa-solid fa-house"></i><span>Home</span></a>
         <a href="/scanner/{{slug}}?auth={{auth_token}}" class="mobile-link"><div class="scan-fab"><i class="fa-solid fa-camera"></i></div><span>Scanner</span></a>
-        <button onclick="openPasswordModal()" class="mobile-link" style="background:none; border:none;"><i class="fa-solid fa-gear"></i><span>Admin</span></button>
+        <button onclick="toggleDrawer()" class="mobile-link"><i class="fa-solid fa-bars"></i><span>Menu</span></button>
     </nav>
+
+    <div class="drawer-overlay" id="drawerOverlay" onclick="toggleDrawer()"></div>
+    <div class="mobile-drawer" id="mobileDrawer">
+        <button class="drawer-close" onclick="toggleDrawer()"><i class="fa-solid fa-xmark"></i></button>
+        
+        <h3 style="font-weight: 800; margin: 0 0 10px 0;">Menu</h3>
+        
+        <button onclick="openPasswordModal(); toggleDrawer();" class="nav-link"><i class="fa-solid fa-lock"></i> Sécurité ID</button>
+        
+        <div style="margin-top: 20px; padding: 20px; background: #f8fafc; border-radius: 16px; text-align: center;">
+            <p style="font-size: 10px; font-weight: 800; margin-bottom: 10px;">QR CODE INSCRIPTION</p>
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://{{slug}}.onrender.app/signup/{{slug}}" style="width:150px; border-radius: 8px;">
+        </div>
+        
+        <a href="/dashboard/{{slug}}/logout" class="nav-link nav-logout" style="margin-top: auto;"><i class="fa-solid fa-power-off"></i> Déconnexion</a>
+    </div>
 
     <main class="main-content">
         <header class="header-flex">
@@ -293,6 +326,12 @@
 
     function openPasswordModal() { document.getElementById('passwordModal').style.display = 'flex'; }
     function closePasswordModal() { document.getElementById('passwordModal').style.display = 'none'; }
+
+    // GESTION DU MENU MOBILE (DRAWER)
+    function toggleDrawer() {
+        document.getElementById('mobileDrawer').classList.toggle('open');
+        document.getElementById('drawerOverlay').classList.toggle('open');
+    }
 
     window.onload = chargerHistorique;
 </script>
