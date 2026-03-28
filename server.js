@@ -237,54 +237,72 @@ app.post('/api/modifier-commerce/:id', upload.single('logo_file'), async (req, r
         const { id } = req.params;
         const body = req.body;
 
-        // 1. Récupérer les anciennes infos pour le logo et l'ancien email
-        const { data: old } = await supabase.from('business').select('*').eq('id', id).single();
-        let publicUrl = old.config_design.logo_url;
+        console.log("--- DÉBUT MODIFICATION COMMERCE ---");
 
-        // 2. Gestion du nouveau logo (si présent)
+        // 1. On récupère les infos actuelles
+        const { data: old, error: fetchError } = await supabase.from('business').select('*').eq('id', id).single();
+        if (fetchError || !old) return res.status(404).send("Commerce non trouvé");
+
+        // 2. On prépare l'objet de mise à jour (ON NE MET QUE CE QUI EST NÉCESSAIRE)
+        let updateData = {
+            nom: body.nom,
+            prix_mensuel: body.prix_mensuel,
+            statut: body.statut,
+            points_per_euro: body.points_per_euro,
+            logic_type: body.logic_type,
+            points_thresholds: body.points_thresholds,
+            config_design: {
+                ...old.config_design, // On garde les anciennes valeurs par défaut
+                card_html: body.card_html,
+                card_css: body.card_css
+            }
+        };
+
+        // On ne met à jour le logo que si un nouveau fichier est envoyé
         if (req.file) {
-            const fileName = `${Date.now()}-${body.slug}.${req.file.originalname.split('.').pop()}`;
+            const fileName = `${Date.now()}-${id}.${req.file.originalname.split('.').pop()}`;
             await supabase.storage.from('logos').upload(`uploads/${fileName}`, req.file.buffer, { upsert: true });
-            publicUrl = supabase.storage.from('logos').getPublicUrl(`uploads/${fileName}`).data.publicUrl;
+            updateData.config_design.logo_url = supabase.storage.from('logos').getPublicUrl(`uploads/${fileName}`).data.publicUrl;
         }
 
-        // 3. MISE À JOUR AUTH (AUTOMATIQUE)
-        // On cherche l'utilisateur par son ancien email pour modifier son compte
-        const { data: userList } = await supabase.auth.admin.listUsers();
-        const authUser = userList.users.find(u => u.email === old.gestionnaire_email);
+        // --- SECTION CRITIQUE : AUTH ---
+        // On ne touche à l'Auth QUE si l'utilisateur a changé manuellement l'email ou le password
+        // Si les valeurs envoyées sont les mêmes que 'old', on ignore COMPLÈTEMENT Supabase Auth.
+        if (body.g_email !== old.gestionnaire_email || (body.password && body.password !== old.password)) {
+            console.log("Changement d'identifiants détecté, mise à jour Auth en cours...");
+            
+            const { data: userList } = await supabase.auth.admin.listUsers();
+            const authUser = userList.users.find(u => u.email === old.gestionnaire_email);
 
-        if (authUser) {
-            await supabase.auth.admin.updateUserById(authUser.id, {
-                email: body.g_email,
-                password: body.password, // Met à jour le mot de passe de connexion
-                email_confirm: true
-            });
+            if (authUser) {
+                await supabase.auth.admin.updateUserById(authUser.id, {
+                    email: body.g_email,
+                    password: body.password,
+                    email_confirm: true
+                });
+                // On met à jour l'email et le password dans la table business aussi
+                updateData.gestionnaire_email = body.g_email;
+                updateData.password = body.password;
+            }
+        } else {
+            console.log("Pas de changement d'identifiants. Session préservée.");
         }
 
-        // 4. Mise à jour de la table business (Ton code existant)
-        await supabase.from('business').update({ 
-            nom: body.nom, 
-            gestionnaire_email: body.g_email, // On met à jour l'email aussi ici
-            prix_mensuel: body.prix_mensuel, 
-            statut: body.statut, 
-            password: body.password, 
-            points_per_euro: body.points_per_euro, 
-            logic_type: body.logic_type, 
-            points_thresholds: body.points_thresholds, 
-            config_design: { 
-                couleur: body.couleur, 
-                logo_url: publicUrl, 
-                card_html: body.card_html, 
-                card_css: body.card_css 
-            } 
-        }).eq('id', id);
+        // 3. Update final de la table business
+        const { error: updateError } = await supabase.from('business').update(updateData).eq('id', id);
+        
+        if (updateError) throw updateError;
 
-        await logAction('UPDATE', `Commerce et Auth mis à jour : ${body.nom}`);
-        res.redirect('/admin/inventory');
+        await logAction('UPDATE', `Design/Commerce mis à jour pour : ${body.nom}`);
+        
+        console.log("--- FIN MODIFICATION : REDIRECTION ---");
+        
+        // On utilise un redirect explicite
+        return res.redirect('/admin/inventory');
 
     } catch (err) { 
-        console.error(err);
-        res.status(500).send("Erreur modification : " + err.message); 
+        console.error("ERREUR DANS LA ROUTE :", err);
+        res.status(500).send("Erreur : " + err.message); 
     }
 });
 // --- DASHBOARD COMMERÇANT ---
@@ -706,7 +724,7 @@ app.post('/api/update-password/:slug', async (req, res) => {
 app.post('/api/supprimer-commerce/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const ADMIN_EMAIL = 'ton-email-admin@gmail.com'; // <--- TON EMAIL ADMIN ICI
+        const ADMIN_EMAIL = 'lafendiabdallahimad@gmail.com'; // <--- TON EMAIL ADMIN ICI
         const authHeader = req.headers.authorization;
 
         // 1. Sécurité : Seul l'admin peut supprimer un compte SaaS

@@ -1,0 +1,8 @@
+{
+  "ignore": [
+    "views/carte.html",
+    "views/carte.css",
+    "logs/*.log",
+    "session/*"
+  ]
+}
