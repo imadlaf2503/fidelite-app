@@ -316,16 +316,23 @@ app.get('/dashboard/:slug/login', async (req, res) => {
 });
 
 // --- DASHBOARD SÉCURISÉ (ADMIN + COMMERÇANT) ---
+// --- DASHBOARD SÉCURISÉ (ADMIN + COMMERÇANT) ---
+// --- DASHBOARD SÉCURISÉ (ADMIN + COMMERÇANT) ---
 app.get('/dashboard/:slug', async (req, res) => {
     try {
         const { slug } = req.params;
         const authToken = req.query.auth;
-        const ADMIN_EMAIL = 'lafendiabdallahimad@gmail.com'; // <--- TON EMAIL ADMIN
+        const ADMIN_EMAIL = 'lafendiabdallahimad@gmail.com'.toLowerCase().trim(); // TON EMAIL ADMIN
 
-        const { data: b } = await supabase.from('business').select('*').eq('slug', slug).single();
-        if (!b) return res.status(404).send("Commerce inconnu");
+        // 1. Récupération du commerce par son slug
+        const { data: b, error: bError } = await supabase.from('business').select('*').eq('slug', slug).single();
+        
+        if (bError || !b) {
+            console.error(`Commerce introuvable pour le slug : ${slug}`);
+            return res.status(404).send("Commerce inconnu");
+        }
 
-        // 1. Si pas de token, on affiche la page de login du commerce
+        // 2. Si pas de token, redirection vers la page de login
         if (!authToken) {
             return res.send(render('login-dashboard.html', { 
                 nom: b.nom, logo_url: b.config_design.logo_url, slug: b.slug, 
@@ -333,50 +340,55 @@ app.get('/dashboard/:slug', async (req, res) => {
             }));
         }
 
-        // 2. Vérification du token Supabase
+        // 3. Vérification de l'utilisateur via le token
         const { data: { user }, error: authError } = await supabase.auth.getUser(authToken);
 
-        // 3. Définition des rôles
-        const isOwner = user && user.email === b.gestionnaire_email;
-        const isAdmin = user && user.email === ADMIN_EMAIL;
+        // --- SECTION DE VÉRIFICATION ET DIAGNOSTIC ---
+        const userEmail = user?.email?.toLowerCase().trim();
+        const managerEmail = b.gestionnaire_email?.toLowerCase().trim();
+        const adminEmailClean = ADMIN_EMAIL;
 
-        // Sécurité de base : Authentification
+        // Ces logs s'affichent dans ton terminal pour déboguer
+        console.log("--- TEST D'ACCÈS DASHBOARD ---");
+        console.log(`Slug visité : ${slug}`);
+        console.log(`Email connecté (Supabase Auth) : [${userEmail}]`);
+        console.log(`Email attendu (Table Business) : [${managerEmail}]`);
+
+        const isOwner = userEmail && managerEmail && userEmail === managerEmail;
+        const isAdmin = userEmail === adminEmailClean;
+
         if (authError || !user || (!isOwner && !isAdmin)) {
-            console.log(`Accès refusé pour ${user?.email} sur le slug ${slug}`);
-            return res.redirect(`/dashboard/${slug}?error=unauthorized`);
+            console.error(`ACCÈS REFUSÉ : L'email ${userEmail} n'est ni l'admin, ni le gestionnaire déclaré.`);
+            return res.redirect(`/dashboard/${slug}/login?error=unauthorized`);
         }
+        // ---------------------------------------------
 
-        // --- NOUVEAU : SÉCURITÉ PAIEMENT ---
+        // 4. Vérification du statut de paiement
         const estPaye = b.statut && b.statut.toLowerCase() === 'payé';
         
         if (!estPaye && !isAdmin) {
             return res.status(403).send(`
                 <div style="font-family: 'Plus Jakarta Sans', sans-serif; text-align:center; padding:100px 20px; background:#f8fafc; min-height:100vh;">
-                    <div style="max-width:500px; margin:auto; background:white; padding:40px; border-radius:24px; border:1px solid #e2e8f0; shadow: 0 10px 15px -3px rgba(0,0,0,0.1);">
+                    <div style="max-width:500px; margin:auto; background:white; padding:40px; border-radius:24px; border:1px solid #e2e8f0; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);">
                         <div style="color:#f59e0b; font-size:50px; margin-bottom:20px;"><i class="fa-solid fa-circle-exclamation"></i></div>
                         <h1 style="color:#0f172a; font-weight:900; text-transform:uppercase; margin-bottom:10px;">Accès Restreint</h1>
                         <p style="color:#64748b; font-size:14px; margin-bottom:30px;">
                             Votre abonnement pour <b>${b.nom}</b> est actuellement en attente de paiement ou expiré. 
                         </p>
-                        <div style="background:#f1f5f9; padding:15px; border-radius:12px; font-size:12px; color:#475569; margin-bottom:30px;">
-                            Veuillez contacter le support ou régler votre facture pour réactiver votre Dashboard.
-                        </div>
                         <a href="/dashboard/${slug}/login" style="display:inline-block; background:#6366f1; color:white; padding:12px 25px; border-radius:10px; text-decoration:none; font-weight:bold; font-size:13px;">Retour à la connexion</a>
                     </div>
                 </div>
             `);
         }
 
-        // 4. Si OK (Payé ou Admin), on charge les données des clients
+        // 5. Chargement des clients du commerce
         const { data: customers } = await supabase.from('customers').select('*').eq('business_id', b.id).order('created_at', { ascending: false });
         
         const REWARD_THRESHOLD = parseInt(b.points_thresholds) || 10; 
 
-        // --- GÉNÉRATION DES LIGNES AVEC ACTIONS (AVEC OPTION OFFRIR) ---
+        // Génération des lignes du tableau
         const tableRows = (customers || []).map(c => {
             const isReady = c.points >= REWARD_THRESHOLD;
-            
-            // Nettoyage des données pour éviter les erreurs JavaScript (guillemets, undefined)
             const cleanPrenom = (c.prenom || "").replace(/'/g, "\\'");
             const cleanNom = (c.nom || "").replace(/'/g, "\\'");
             const cleanPhone = (c.telephone || "").replace(/'/g, "\\'");
@@ -395,30 +407,21 @@ app.get('/dashboard/:slug', async (req, res) => {
                 </td>
                 <td class="p-4" style="text-align: right;">
                     <div style="display:flex; justify-content:flex-end; gap:8px; align-items:center; flex-wrap: wrap;">
-                        
                         <button class="action-btn btn-gift" onclick="offrirCadeau('${c.id}')" 
                                 style="display: ${isReady ? 'inline-block' : 'none'}; background: #f59e0b; color: white; border:none; padding: 8px 12px; border-radius: 8px; font-weight: 800; font-size: 10px;">
                             <i class="fa-solid fa-gift"></i> OFFRIR
                         </button>
-
-                        <button class="action-btn btn-plus" onclick="updatePoints('${c.id}', 1)" title="Ajouter 1 point"><i class="fa-solid fa-plus"></i></button>
-                        
-                        <button class="action-btn btn-minus" onclick="updatePoints('${c.id}', -1)" title="Enlever 1 point"><i class="fa-solid fa-minus"></i></button>
-                        
-                        <button class="action-btn btn-edit" 
-                                onclick="openEditModal('${c.id}', '${cleanPrenom}', '${cleanNom}', '${cleanPhone}', '${cleanEmail}')" 
-                                title="Modifier les infos" style="color: var(--primary);">
-                            <i class="fa-solid fa-pen-to-square"></i>
-                        </button>
-                        
-                        <a href="/my-card/${c.id}" target="_blank" class="action-btn" style="color: #6366f1;" title="Voir la carte"><i class="fa-solid fa-eye"></i></a>
-                        
-                        <button class="action-btn btn-del" onclick="deleteCustomer('${c.id}')" title="Supprimer"><i class="fa-solid fa-trash"></i></button>
+                        <button class="action-btn btn-plus" onclick="updatePoints('${c.id}', 1)"><i class="fa-solid fa-plus"></i></button>
+                        <button class="action-btn btn-minus" onclick="updatePoints('${c.id}', -1)"><i class="fa-solid fa-minus"></i></button>
+                        <button class="action-btn btn-edit" onclick="openEditModal('${c.id}', '${cleanPrenom}', '${cleanNom}', '${cleanPhone}', '${cleanEmail}')"><i class="fa-solid fa-pen-to-square"></i></button>
+                        <a href="/my-card/${c.id}" target="_blank" class="action-btn" style="color: #000000;"><i class="fa-solid fa-eye"></i></a>
+                        <button class="action-btn btn-del" onclick="deleteCustomer('${c.id}')"><i class="fa-solid fa-trash"></i></button>
                     </div>
                 </td>
             </tr>`;
         }).join('');
 
+        // 6. Envoi final du Dashboard
         res.send(render('dashboard-template.html', { 
             business_id: b.id,
             nom: b.nom, 
@@ -434,7 +437,7 @@ app.get('/dashboard/:slug', async (req, res) => {
         }));
 
     } catch (e) { 
-        console.error(e);
+        console.error("Erreur critique Dashboard :", e);
         res.status(500).send("Erreur serveur"); 
     }
 });

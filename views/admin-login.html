@@ -7,77 +7,119 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* Fond blanc et texte noir par défaut */
+        body { background-color: #ffffff; font-family: 'Inter', sans-serif; color: #000000; }
+        
+        /* Inputs : Fond très clair, texte noir et bordure noire au focus */
+        .glass-input { 
+            background: #f8fafc; 
+            border: 1px solid #e2e8f0; 
+            color: #000000;
+            transition: all 0.3s ease; 
+        }
+        .glass-input:focus { 
+            border-color: #000000; 
+            background: #ffffff; 
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1); 
+            outline: none; 
+        }
+
+        /* Le bouton : Noir profond avec effet de lueur */
+        .btn-glow { 
+            background: #000000; 
+            color: #ffffff;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.3); 
+            transition: all 0.2s; 
+        }
+        .btn-glow:active { transform: scale(0.95); box-shadow: 0 0 5px rgba(0, 0, 0, 0.2); }
+        
+        /* Labels en gris foncé */
+        .floating-label { 
+            font-size: 10px; 
+            font-weight: 900; 
+            text-transform: uppercase; 
+            letter-spacing: 0.2em; 
+            color: #475569; 
+        }
+    </style>
 </head>
-<body class="bg-slate-50 min-h-screen flex items-center justify-center p-6">
+<body class="flex flex-col items-center justify-center min-h-screen p-6">
 
-    <div class="w-full max-w-md">
-        <div class="bg-white rounded-[2rem] shadow-xl shadow-slate-200/60 p-10 border border-slate-100">
-            <div class="text-center mb-10">
-                <div class="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-200">
-                    <i class="fa-solid fa-shield-halved text-white text-2xl"></i>
-                </div>
-                <h1 class="text-2xl font-black text-slate-900 uppercase tracking-tight">Accès <span class="text-indigo-600">Master</span></h1>
-                <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mt-2">Administration de la plateforme</p>
-            </div>
-
-            <form id="loginForm" class="space-y-6">
-                <div>
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email Administrateur</label>
-                    <input type="email" id="email" required 
-                        class="w-full mt-2 px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-indigo-600 focus:bg-white transition font-semibold text-slate-700">
-                </div>
-
-                <div>
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Mot de passe</label>
-                    <input type="password" id="password" required 
-                        class="w-full mt-2 px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-indigo-600 focus:bg-white transition font-semibold text-slate-700">
-                </div>
-
-                <button type="submit" id="btnText"
-                    class="w-full bg-slate-900 text-white py-5 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-indigo-600 hover:scale-[1.02] transition-all shadow-xl shadow-slate-200">
-                    S'authentifier
-                </button>
-            </form>
-
-            <div id="errorMessage" class="hidden mt-6 p-4 bg-red-50 rounded-xl text-red-500 text-xs font-bold text-center uppercase tracking-tight">
-                Identifiants incorrects
+    <div class="text-center mb-10">
+        <div class="relative inline-block">
+            <div class="w-20 h-20 bg-black rounded-[2rem] flex items-center justify-center mb-6 shadow-xl border border-slate-100 relative z-10">
+                <i class="fa-solid fa-shield-halved text-white text-3xl"></i>
             </div>
         </div>
-        
-        <p class="text-center mt-8 text-slate-400 text-[10px] font-bold uppercase tracking-widest">
-            &copy; 2026 Plateforme Fidélité - Sécurité Niveau 3
+        <h1 class="text-2xl font-black uppercase tracking-tighter text-black">Accès <span class="text-slate-500">Master</span></h1>
+        <p class="floating-label mt-2 text-slate-500">Administration de la plateforme</p>
+    </div>
+
+    <div class="w-full max-w-sm">
+        <form id="loginForm" class="space-y-6">
+            
+            <div class="relative">
+                <label class="floating-label ml-4 mb-2 block">Email Administrateur</label>
+                <div class="relative mb-4">
+                    <i class="fa-solid fa-user-shield absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                    <input type="email" id="email" required 
+                           placeholder="admin@plateforme.com" 
+                           class="glass-input w-full py-5 pl-14 pr-6 rounded-3xl font-medium text-lg">
+                </div>
+
+                <label class="floating-label ml-4 mb-2 block">Mot de passe secret</label>
+                <div class="relative">
+                    <i class="fa-solid fa-key absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                    <input type="password" id="password" required 
+                           placeholder="••••••••" 
+                           class="glass-input w-full py-5 pl-14 pr-6 rounded-3xl font-medium tracking-widest text-lg">
+                </div>
+            </div>
+
+            <button type="submit" id="btnText" class="btn-glow w-full py-5 rounded-3xl font-black uppercase tracking-widest text-sm mt-4 flex items-center justify-center gap-3">
+                <span>S'authentifier</span> <i class="fa-solid fa-arrow-right text-xs"></i>
+            </button>
+            
+        </form>
+
+        <div id="errorMessage" class="hidden mt-8 p-4 bg-red-50 rounded-2xl text-red-600 text-[10px] font-black text-center uppercase tracking-widest border border-red-100">
+            Identifiants incorrects
+        </div>
+
+        <p class="text-center mt-12 text-slate-400 text-[9px] font-bold uppercase tracking-[0.3em]">
+            &copy; 2026 Plateforme Fidélité <br> <span class="text-slate-300">Sécurité Niveau 3</span>
         </p>
     </div>
 
     <script>
-        // Correction ici : on utilise l'objet 'supabase' de la bibliothèque chargée via CDN
         const { createClient } = window.supabase; 
         const supabaseClient = createClient('{{supabase_url}}', '{{supabase_key}}');
 
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const email = document.getElementById('email').value;
+            const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
             const btn = document.getElementById('btnText');
             const errorBox = document.getElementById('errorMessage');
 
-            btn.innerText = "VÉRIFICATION...";
-            btn.disabled = true; // Empêche le double clic
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch animate-spin"></i>';
+            btn.disabled = true;
             errorBox.classList.add('hidden');
 
-            // On utilise supabaseClient au lieu de supabase (pour éviter la confusion de nom)
             const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
 
             if (error) {
-                btn.innerText = "S'AUTHENTIFIER";
+                btn.innerHTML = '<span>S\'authentifier</span> <i class="fa-solid fa-arrow-right text-xs"></i>';
                 btn.disabled = false;
-                errorBox.innerText = error.message; // Affiche l'erreur réelle (ex: invalid credentials)
+                errorBox.innerText = "ERREUR : " + error.message.toUpperCase();
                 errorBox.classList.remove('hidden');
             } else {
-                // Redirection vers l'inventaire avec le token session
                 window.location.href = `/admin/inventory?auth=${data.session.access_token}`;
             }
         });
-</script>
+
+        window.onload = () => document.getElementById('email').focus();
+    </script>
 </body>
 </html>
