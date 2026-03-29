@@ -65,31 +65,46 @@
             startScanner();
         });
 
-        function processScanResult(customerId) {
+        function processScanResult(decodedId) { // decodedId sera l'UUID du client
             if (!isScanning) return;
             isScanning = false;
+            
             beep.play();
             cameraBox.classList.add('flash-success');
             setTimeout(() => cameraBox.classList.remove('flash-success'), 400);
 
             const token = new URLSearchParams(window.location.search).get('auth');
 
-            fetch(`/api/add-points/${slug}`, {
+            // On utilise l'ID du commerce (slug ou id selon ta route)
+            fetch(`/api/scan/${slug}`, { 
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}` 
                 },
-                body: JSON.stringify({ customerId: customerId })
+                // IMPORTANT : On envoie "customer_id" pour correspondre au serveur
+                body: JSON.stringify({ customer_id: decodedId }) 
             })
             .then(res => res.json())
             .then(data => {
                 if(data.success) {
-                    statusText.innerHTML = `<span class="text-green-500">SUCCÈS : ${data.customerName.toUpperCase()}</span>`;
+                    statusText.innerHTML = `<span class="text-green-500 font-bold">POINTS AJOUTÉS !</span>`;
+                    // Optionnel : ajouter à l'historique visuel ici
                 } else {
-                    statusText.innerHTML = `<span class="text-red-500">REFUSÉ</span>`;
+                    // Affiche le message "Cette carte appartient à un autre établissement"
+                    statusText.innerHTML = `<span class="text-red-500 font-bold">${data.message.toUpperCase()}</span>`;
                 }
-                setTimeout(() => { isScanning = true; statusText.innerText = "Prêt"; }, 2000);
+                
+                // On réactive le scanner après 3 secondes pour laisser le temps de lire le message
+                setTimeout(() => { 
+                    isScanning = true; 
+                    statusText.innerText = "PRÊT POUR LE PROCHAIN SCAN"; 
+                }, 3000);
+            })
+            .catch(err => {
+                console.error(err);
+                statusText.innerHTML = `<span class="text-red-500">ERREUR RÉSEAU</span>`;
+                isScanning = true;
             });
         }
 

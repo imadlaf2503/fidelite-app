@@ -481,39 +481,69 @@ app.get('/scanner/:slug', async (req, res) => {
 
 app.post('/api/scan/:id', async (req, res) => {
     try {
-        const { id } = req.params; // ID du commerce
-        const { client_nom } = req.body; // Nom du client scanné
+        const identifierFromScanner = req.params.id; // Actuellement reçoit le "slug" (ex: "test")
+        const { customer_id } = req.body; 
 
-        // 1. On ajoute le point au compteur du commerce (ton code habituel)
-        // ... (ton code de mise à jour de la table business) ...
+        if (!customer_id) {
+            return res.status(400).json({ success: false, message: "ID client manquant" });
+        }
 
-        // 2. NOUVEAU : On enregistre le scan dans l'historique
-        const { error: scanError } = await supabase
-            .from('scans')
-            .insert([
-                { 
-                    business_id: id, 
-                    client_nom: client_nom || 'Client Anonyme', 
-                    points_ajoutes: 1 
-                }
-            ]);
+        // --- NOUVELLE ÉTAPE : TRADUIRE LE SLUG EN ID RÉEL ---
+        const { data: business } = await supabase
+            .from('business')
+            .select('id')
+            .eq('slug', identifierFromScanner) // On cherche le commerce par son slug
+            .single();
 
-        if (scanError) console.error("Erreur historique:", scanError);
+        if (!business) {
+            return res.status(404).json({ success: false, message: "Commerce introuvable." });
+        }
+        
+        const realBusinessId = business.id; // C'est cet ID (UUID/Nombre) qu'on va comparer
 
-        res.json({ success: true });
+        // 1. RECHERCHE DU CLIENT
+        const { data: customer, error: fetchError } = await supabase
+            .from('customers')
+            .select('id, business_id, points')
+            .eq('id', customer_id)
+            .single();
+
+        if (fetchError || !customer) {
+            return res.status(404).json({ success: false, message: "Carte invalide." });
+        }
+
+        // 3. LA BARRIÈRE ANTI-FRAUDE (COMPARAISON DES IDS RÉELS)
+        // On compare l'ID du client (ex: 12) avec l'ID du commerce trouvé (ex: 12)
+        if (String(customer.business_id) !== String(realBusinessId)) {
+            console.warn(`FRAUDE : Client ${customer_id} appartient à ${customer.business_id}, pas à ${realBusinessId}`);
+            return res.status(403).json({ 
+                success: false, 
+                message: "Erreur : Cette carte appartient à un autre établissement !" 
+            });
+        }
+
+        // 4. TOUT EST BON : ON AJOUTE LE POINT
+        const nouveauxPoints = (customer.points || 0) + 1;
+        const { error: updateError } = await supabase
+            .from('customers')
+            .update({ points: nouveauxPoints })
+            .eq('id', customer_id);
+
+        if (updateError) throw updateError;
+
+        // 5. ENREGISTRER DANS L'HISTORIQUE
+        await supabase.from('scans').insert([{ 
+            business_id: realBusinessId, 
+            customer_id: customer_id, 
+            points_ajoutes: 1 
+        }]);
+
+        res.json({ success: true, message: "Point ajouté !", total_points: nouveauxPoints });
+
     } catch (err) {
-        res.status(500).json({ success: false });
+        console.error("Erreur Scan:", err);
+        res.status(500).json({ success: false, message: "Erreur technique" });
     }
-});
-
-app.post('/api/dashboard-data/:slug', async (req, res) => {
-    try {
-        const { slug } = req.params;
-        const { data: b } = await supabase.from('business').select('*').eq('slug', slug).single();
-        const { data: customers } = await supabase.from('customers').select('*').eq('business_id', b.id).order('created_at', { ascending: false });
-        const tableRows = (customers || []).map(c => `<tr class="hover:bg-slate-50 transition"><td class="p-4">${c.prenom} ${c.nom}</td><td class="p-4">${c.email}</td><td class="p-4">${c.points} PTS</td></tr>`).join('');
-        res.json({ html: tableRows, nbClients: customers.length });
-    } catch (e) { res.status(500).json({ error: "Erreur" }); }
 });
 
 // --- ROUTES CLIENTS & API POINTS ---
