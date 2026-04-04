@@ -8,21 +8,24 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #ffffff; color: #000000; }
         
         .card-stats { background: white; border: 1px solid #e2e8f0; border-radius: 24px; transition: all 0.3s; }
-        .card-stats:hover { border-color: #0000; transform: translateY(-2px); }
+        .card-stats:hover { border-color: #000000; transform: translateY(-2px); }
         
-        .search-bar { background: white; border: 1px solid #e2e8f0; border-radius: 16px; transition: all 0.2s; }
-        .search-bar:focus-within { border-color: #0000; box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.05); }
+        .search-bar { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; transition: all 0.2s; }
+        .search-bar:focus-within { border-color: #000000; box-shadow: 0 0 15px rgba(0, 0, 0, 0.05); }
 
         .table-container { background: white; border: 1px solid #e2e8f0; border-radius: 24px; overflow: hidden; }
         
-        .btn-primary { background: #0f172a; color: white; border-radius: 14px; transition: all 0.2s; }
+        .btn-primary { background: #000000; color: white; border-radius: 14px; transition: all 0.2s; }
         .btn-primary:hover { background: #334155; transform: scale(1.02); }
 
-        .btn-logout { background: #fef2f2; color: #ef4444; border: 1px solid #fee2e2; border-radius: 14px; transition: all 0.2s; }
-        .btn-logout:hover { background: #ef4444; color: white; transform: scale(1.02); }
+        .btn-logout { background: #f8fafc; color: #000000; border: 1px solid #e2e8f0; border-radius: 14px; transition: all 0.2s; }
+        .btn-logout:hover { background: #000000; color: white; transform: scale(1.02); }
+
+        /* Style pour les badges de statut pour rester dans le thème */
+        .status-badge-active { background: #f1f5f9; color: #000000; border: 1px solid #e2e8f0; }
     </style>
 </head>
 <body class="min-h-screen p-6 md:p-10">
@@ -30,7 +33,7 @@
     <div class="max-w-7xl mx-auto">
         <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-6">
             <div>
-                <h1 class="text-3xl font-black tracking-tight text-slate-900 uppercase">Gestion <span class="text-indigo-600">Partenaires</span></h1>
+                <h1 class="text-3xl font-black tracking-tight text-slate-900 uppercase">Gestion <span class="text-black">Partenaires</span></h1>
                 <p class="text-slate-500 text-xs font-bold uppercase tracking-widest mt-1">Contrôle centralisé du réseau de fidélité</p>
             </div>
             <div class="flex flex-wrap gap-3">
@@ -40,7 +43,7 @@
                 <button onclick="exportToCSV()" class="bg-white border border-slate-200 text-slate-600 px-5 py-3 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-50 transition">
                     <i class="fa-solid fa-download mr-2"></i> CSV
                 </button>
-                <a href="/admin/create" class="btn-primary px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-slate-200">
+                <a href="/admin/create" class="btn-primary px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-slate-100">
                     + Nouveau Commerce
                 </a>
                 <button onclick="logout()" class="btn-logout px-6 py-3 font-bold text-xs uppercase tracking-widest shadow-sm">
@@ -56,12 +59,12 @@
             </div>
             <div class="card-stats p-6">
                 <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Revenu Mensuel</p>
-                <span class="text-3xl font-black text-indigo-600">{{revenuTotal}}</span>
+                <span class="text-3xl font-black text-black">{{revenuTotal}}</span>
             </div>
             <div class="card-stats p-6">
                 <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Statut Plateforme</p>
                 <div class="flex items-center gap-2 mt-1">
-                    <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <div class="w-2 h-2 bg-black rounded-full animate-pulse"></div>
                     <span class="text-xs font-bold uppercase text-slate-700">Opérationnel</span>
                 </div>
             </div>
@@ -71,7 +74,7 @@
             <i class="fa-solid fa-magnifying-glass text-slate-300 mr-4"></i>
             <input type="text" id="searchInput" onkeyup="filterTable()" 
                 placeholder="Rechercher une enseigne, un gérant ou un email..." 
-                class="w-full py-4 text-sm font-semibold outline-none text-slate-700">
+                class="w-full py-4 text-sm font-semibold outline-none text-slate-700 bg-transparent">
         </div>
 
         <div class="table-container shadow-sm">

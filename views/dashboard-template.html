@@ -75,7 +75,7 @@
         .iti { width: 100%; margin-bottom: 16px; }
         .iti__flag-container { border-radius: 12px 0 0 12px; }
 
-        /* --- MOBILE ADAPTATION (MODIFIED TO HIDE ON PC) --- */
+        /* --- MOBILE ADAPTATION --- */
         .mobile-nav, .mobile-drawer, .drawer-overlay { display: none; }
 
         @media (max-width: 992px) {
@@ -95,6 +95,8 @@
             .mobile-drawer { position: fixed; top: 0; right: -100%; width: 80%; height: 100%; background: white; z-index: 2001; transition: 0.3s; padding: 40px 20px; display: flex; flex-direction: column; gap: 10px; }
             .drawer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2000; display: none; }
         }
+
+        .otp-group { display: none; margin-top: 15px; padding-top: 15px; border-top: 1px dashed var(--border); }
     </style>
 </head>
 <body>
@@ -106,6 +108,7 @@
             <a href="#" class="nav-link active"><i class="fa-solid fa-house"></i> Accueil</a>
             <a href="/scanner/{{slug}}?auth={{auth_token}}" class="nav-link"><i class="fa-solid fa-qrcode"></i> Scanner</a>
             <button onclick="openModal('addMemberModal')" class="nav-link"><i class="fa-solid fa-user-plus"></i> Nouveau Membre</button>
+            <button onclick="openModal('profileSettingsModal')" class="nav-link"><i class="fa-solid fa-user-gear"></i> Mon Profil</button>
             <button onclick="openModal('passwordModal')" class="nav-link"><i class="fa-solid fa-lock"></i> Modifier mot de passe</button>
             <a href="/dashboard/{{slug}}/logout" class="nav-link nav-logout"><i class="fa-solid fa-power-off"></i> Déconnexion</a>
         </nav>
@@ -126,6 +129,7 @@
     <div class="mobile-drawer" id="mobileDrawer">
         <h3 style="font-weight: 800; margin-bottom: 20px; padding-top: 10px;">Menu</h3>
         <button onclick="openModal('addMemberModal'); toggleDrawer();" class="nav-link"><i class="fa-solid fa-user-plus"></i> Nouveau Membre</button>
+        <button onclick="openModal('profileSettingsModal'); toggleDrawer();" class="nav-link"><i class="fa-solid fa-user-gear"></i> Mon Profil</button>
         <button onclick="openModal('passwordModal'); toggleDrawer();" class="nav-link"><i class="fa-solid fa-lock"></i> Modifier mot de passe</button>
         
         <div style="margin-top: 20px; padding: 15px; background: #f1f5f9; border-radius: 16px; text-align: center;">
@@ -178,15 +182,69 @@
 <div id="passwordModal" class="modal">
     <div class="modal-box">
         <h3 style="margin:0 0 10px; font-weight: 800;">Modifier mon mot de passe</h3>
-        <p style="font-size: 12px; color: var(--text-light); margin-bottom: 20px;">Confirmez vos accès.</p>
-        <form id="changePasswordForm">
-            <input type="password" id="old_pass" placeholder="Ancien mot de passe" class="modal-input" required>
-            <input type="password" id="new_pass" placeholder="Nouveau mot de passe" class="modal-input" required>
-            <input type="password" id="confirm_pass" placeholder="Confirmer nouveau" class="modal-input" required>
-            <div id="passError" style="color: var(--danger); font-size: 12px; margin-bottom: 10px; display: none;"></div>
-            <button type="submit" class="modal-btn">Mettre à jour</button>
-            <button type="button" onclick="closeModal('passwordModal')" style="width: 100%; background: none; border: none; margin-top: 10px; color: var(--text-light); cursor: pointer;">Annuler</button>
-        </form>
+        <div id="pwStep1">
+            <p style="font-size: 12px; color: var(--text-light); margin-bottom: 20px;">Un code de vérification vous sera envoyé pour confirmer le changement.</p>
+            <form id="requestPwOTP">
+                <input type="password" id="old_pass" placeholder="Mot de passe actuel" class="modal-input" required>
+                <div style="display:flex; gap:10px; margin-bottom:10px;">
+                    <label style="font-size:12px;"><input type="radio" name="otp_method" value="email" checked> Par Email</label>
+                    <label style="font-size:12px;"><input type="radio" name="otp_method" value="sms"> Par SMS</label>
+                </div>
+                <button type="submit" class="modal-btn">Envoyer le code</button>
+            </form>
+        </div>
+        <div id="pwStep2" style="display:none;">
+            <form id="changePasswordForm">
+                <input type="text" id="pw_otp_code" placeholder="Code de vérification" class="modal-input" required>
+                <input type="password" id="new_pass" placeholder="Nouveau mot de passe" class="modal-input" required>
+                <input type="password" id="confirm_pass" placeholder="Confirmer nouveau" class="modal-input" required>
+                <div id="passError" style="color: var(--danger); font-size: 12px; margin-bottom: 10px; display: none;"></div>
+                <button type="submit" class="modal-btn">Confirmer le changement</button>
+            </form>
+        </div>
+        <button type="button" onclick="closeModal('passwordModal')" style="width: 100%; background: none; border: none; margin-top: 10px; color: var(--text-light); cursor: pointer;">Annuler</button>
+    </div>
+</div>
+
+<div id="profileSettingsModal" class="modal">
+    <div class="modal-box">
+        <h3 style="margin:0 0 20px; font-weight: 800;">Modifier mes coordonnées</h3>
+        
+        <div style="margin-bottom:25px; padding-bottom:15px; border-bottom:1px solid var(--border);">
+            <label style="font-size:11px; font-weight:700; color:var(--text-light); text-transform:uppercase;">Email</label>
+            <div id="emailView" style="display:flex; justify-content:space-between; align-items:center; margin-top:5px;">
+                <span id="currentEmail" style="font-weight:600;">{{email}}</span>
+                <button onclick="showEmailEdit()" class="btn-edit" style="border:none; background:none; cursor:pointer;"><i class="fa-solid fa-pen"></i></button>
+            </div>
+            <div id="emailEdit" style="display:none; margin-top:10px;">
+                <input type="email" id="new_email" placeholder="Nouvel email" class="modal-input">
+                <p style="font-size:10px; color:var(--warning);">Code de vérification envoyé par SMS.</p>
+                <button onclick="requestEmailOTP()" class="modal-btn" style="padding:10px;">Envoyer code SMS</button>
+                <div id="emailOtpGroup" class="otp-group">
+                    <input type="text" id="email_otp_code" placeholder="Code reçu par SMS" class="modal-input">
+                    <button onclick="verifyEmailChange()" class="modal-btn">Valider l'email</button>
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <label style="font-size:11px; font-weight:700; color:var(--text-light); text-transform:uppercase;">Numéro de téléphone</label>
+            <div id="phoneView" style="display:flex; justify-content:space-between; align-items:center; margin-top:5px;">
+                <span id="currentPhone" style="font-weight:600;">{{telephone}}</span>
+                <button onclick="showPhoneEdit()" class="btn-edit" style="border:none; background:none; cursor:pointer;"><i class="fa-solid fa-pen"></i></button>
+            </div>
+            <div id="phoneEdit" style="display:none; margin-top:10px;">
+                <input type="tel" id="new_phone_input" class="modal-input">
+                <p style="font-size:10px; color:var(--warning);">Code de vérification envoyé par Email.</p>
+                <button onclick="requestPhoneOTP()" class="modal-btn" style="padding:10px;">Envoyer code par Email</button>
+                <div id="phoneOtpGroup" class="otp-group">
+                    <input type="text" id="phone_otp_code" placeholder="Code reçu par Email" class="modal-input">
+                    <button onclick="verifyPhoneChange()" class="modal-btn">Valider le numéro</button>
+                </div>
+            </div>
+        </div>
+
+        <button type="button" onclick="closeModal('profileSettingsModal')" style="width: 100%; background: none; border: none; margin-top: 20px; color: var(--text-light); cursor: pointer;">Fermer</button>
     </div>
 </div>
 
@@ -229,214 +287,180 @@
 <script>
     const sb = window.supabase.createClient('{{supabase_url}}', '{{supabase_key}}');
     const threshold = {{threshold}};
-    // Dans la partie initialisation
-    // Remplace tes initialisations par celles-ci
-        // Initialisation pour l'AJOUT
-const phoneAdd = window.intlTelInput(document.querySelector("#add_phone"), {
-    initialCountry: "auto",
-    separateDialCode: true, // Affiche l'indicatif (+213, +33...) à côté du drapeau
-    geoIpLookup: function(success, failure) {
-        fetch("https://ipapi.co/json")
-            .then(res => res.json())
-            .then(data => success(data.country_code))
-            .catch(() => success("fr"));
-    },
-    utilsScript: "https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/utils.js"
-});
+    
+    // Initialisations Téléphone
+    const phoneAdd = window.intlTelInput(document.querySelector("#add_phone"), {
+        initialCountry: "auto",
+        separateDialCode: true,
+        geoIpLookup: s => fetch("https://ipapi.co/json").then(r => r.json()).then(d => s(d.country_code)).catch(() => s("fr")),
+        utilsScript: "https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/utils.js"
+    });
 
-// Initialisation pour la MODIFICATION
-const phoneEdit = window.intlTelInput(document.querySelector("#edit_phone"), {
-    initialCountry: "auto",
-    separateDialCode: true,
-    utilsScript: "https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/utils.js"
-});
+    const phoneEdit = window.intlTelInput(document.querySelector("#edit_phone"), {
+        initialCountry: "auto",
+        separateDialCode: true,
+        utilsScript: "https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/utils.js"
+    });
 
+    const phoneProfile = window.intlTelInput(document.querySelector("#new_phone_input"), {
+        initialCountry: "auto",
+        separateDialCode: true,
+        utilsScript: "https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/utils.js"
+    });
     
     function openModal(id) { document.getElementById(id).style.display = 'flex'; }
-    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    function closeModal(id) { 
+        document.getElementById(id).style.display = 'none'; 
+        if(id === 'passwordModal') {
+            document.getElementById('pwStep1').style.display = 'block';
+            document.getElementById('pwStep2').style.display = 'none';
+        }
+    }
     
     function toggleDrawer() { 
         const d = document.getElementById('mobileDrawer');
         const o = document.getElementById('drawerOverlay');
-        if(d.style.right === '0px') { 
-            d.style.right = '-100%'; 
-            o.style.display = 'none'; 
-        } else { 
-            d.style.right = '0px'; 
-            o.style.display = 'block'; 
-        }
+        if(d.style.right === '0px') { d.style.right = '-100%'; o.style.display = 'none'; }
+        else { d.style.right = '0px'; o.style.display = 'block'; }
     }
 
-    // OUVRIR MODAL MODIFICATION ET REMPLIR CHAMPS
-  // FONCTION MODIFIER (CORRIGÉE)
+    // GESTION PROFIL
+    function showEmailEdit() { document.getElementById('emailView').style.display='none'; document.getElementById('emailEdit').style.display='block'; }
+    function showPhoneEdit() { document.getElementById('phoneView').style.display='none'; document.getElementById('phoneEdit').style.display='block'; }
+
+    async function requestEmailOTP() {
+        const newEmail = document.getElementById('new_email').value;
+        if(!newEmail) return alert("Entrez le nouvel email");
+        // Logique Supabase OTP par SMS pour changement d'email
+        const { error } = await sb.auth.signInWithOtp({ phone: '{{telephone}}' }); // Envoi au tel actuel
+        if(error) alert(error.message);
+        else document.getElementById('emailOtpGroup').style.display = 'block';
+    }
+
+    async function verifyEmailChange() {
+        const token = document.getElementById('email_otp_code').value;
+        const newEmail = document.getElementById('new_email').value;
+        const { error } = await sb.auth.updateUser({ email: newEmail }, { emailRedirectTo: window.location.href });
+        if(error) alert(error.message);
+        else alert("✅ Email mis à jour !"); location.reload();
+    }
+
+    async function requestPhoneOTP() {
+        // Logique Supabase OTP par Email pour changement de téléphone
+        const { error } = await sb.auth.signInWithOtp({ email: '{{email}}' });
+        if(error) alert(error.message);
+        else document.getElementById('phoneOtpGroup').style.display = 'block';
+    }
+
+    async function verifyPhoneChange() {
+        const token = document.getElementById('phone_otp_code').value;
+        const newPhone = phoneProfile.getNumber();
+        const { error } = await sb.auth.updateUser({ phone: newPhone });
+        if(error) alert(error.message);
+        else alert("✅ Téléphone mis à jour !"); location.reload();
+    }
+
+    // MOT DE PASSE AVEC OTP
+    document.getElementById('requestPwOTP').onsubmit = async (e) => {
+        e.preventDefault();
+        const method = document.querySelector('input[name="otp_method"]:checked').value;
+        const { data: { user } } = await sb.auth.getUser();
+        
+        let config = method === 'email' ? { email: user.email } : { phone: user.phone };
+        const { error } = await sb.auth.signInWithOtp(config);
+        
+        if(error) alert(error.message);
+        else {
+            document.getElementById('pwStep1').style.display = 'none';
+            document.getElementById('pwStep2').style.display = 'block';
+        }
+    };
+
+    document.getElementById('changePasswordForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const newPass = document.getElementById('new_pass').value;
+        const confirmPass = document.getElementById('confirm_pass').value;
+        const otp = document.getElementById('pw_otp_code').value;
+
+        if (newPass !== confirmPass) {
+            document.getElementById('passError').innerText = "❌ Incohérence mots de passe.";
+            document.getElementById('passError').style.display = "block"; return;
+        }
+
+        const { error } = await sb.auth.updateUser({ password: newPass });
+        if (error) alert(error.message);
+        else { alert("✅ Mot de passe changé !"); closeModal('passwordModal'); }
+    };
+
+    // --- LOGIQUE CLIENTS EXISTANTE (CONSERVÉE) ---
     function openEditModal(id, prenom, nom, tel, email) {
-    // 1. Remplissage des champs de base
-    document.getElementById('edit_id').value = id;
-    document.getElementById('edit_prenom').value = prenom;
-    document.getElementById('edit_nom').value = nom;
-    document.getElementById('edit_email').value = (email && email !== 'undefined' && email !== 'null') ? email : '';
-    
-    // 2. Gestion du téléphone sans crash
-    const phoneField = document.getElementById('edit_phone');
-    if (tel && tel !== 'undefined' && tel !== 'null' && tel !== '') {
-        try {
-            // On essaie de mettre le numéro proprement
-            phoneEdit.setNumber(tel);
-            
-            // Si après setNumber le champ est vide (échec de la lib), 
-            // on force la valeur brute dans l'input
-            if (phoneField.value === "") {
-                phoneField.value = tel;
-            }
-        } catch(e) { 
-            // En cas d'erreur critique de la lib, on écrit juste le texte
-            phoneField.value = tel;
-        }
-    } else {
-        phoneEdit.setNumber("");
+        document.getElementById('edit_id').value = id;
+        document.getElementById('edit_prenom').value = prenom;
+        document.getElementById('edit_nom').value = nom;
+        document.getElementById('edit_email').value = (email && email !== 'undefined') ? email : '';
+        try { phoneEdit.setNumber(tel || ""); } catch(e) { document.getElementById('edit_phone').value = tel; }
+        openModal('editMemberModal');
     }
 
-    openModal('editMemberModal');
-}
-
-
-    // SOUMETTRE MODIFICATION CLIENT
     document.getElementById('editCustomerForm').onsubmit = async (e) => {
         e.preventDefault();
-        const id = document.getElementById('edit_id').value;
-        const prenom = document.getElementById('edit_prenom').value;
-        const nom = document.getElementById('edit_nom').value;
-        const phone = phoneInputEdit.getNumber();
-        const email = document.getElementById('edit_email').value;
-
         const { error } = await sb.from('customers').update({ 
-            prenom: prenom, 
-            nom: nom, 
-            telephone: phone, 
-            email: email 
-        }).eq('id', id);
+            prenom: document.getElementById('edit_prenom').value, 
+            nom: document.getElementById('edit_nom').value, 
+            telephone: phoneEdit.getNumber(), 
+            email: document.getElementById('edit_email').value 
+        }).eq('id', document.getElementById('edit_id').value);
+        if (error) alert(error.message); else location.reload();
+    };
 
-        if (error) {
-            alert("Erreur lors de la modification : " + error.message);
-        } else {
+    async function deleteCustomer(id) {
+        if (confirm("Supprimer ce client ?")) {
+            const { error } = await sb.from('customers').delete().eq('id', id);
+            if (error) alert(error.message); else location.reload();
+        }
+    }
+
+    document.getElementById('addCustomerForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const phone = phoneAdd.getNumber();
+        if (!phoneAdd.isValidNumber()) return alert("Numéro invalide");
+        
+        const { data, error } = await sb.from('customers').insert([{
+            prenom: document.getElementById('add_prenom').value,
+            nom: document.getElementById('add_nom').value,
+            telephone: phone,
+            email: document.getElementById('add_email').value,
+            business_id: "{{business_id}}",
+            points: 1
+        }]).select();
+
+        if (error) alert(error.message);
+        else if (data?.[0]) {
+            const msg = `Bonjour ${data[0].prenom} ! 👋\nBienvenue chez {{nom}} ! ✨\nVotre carte : https://fidelite-app-n2cz.onrender.com/my-card/${data[0].id}`;
+            window.open(`https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`, '_blank');
             location.reload();
         }
     };
 
-    // SUPPRIMER CLIENT
-    async function deleteCustomer(id) {
-        if (confirm("Êtes-vous sûr de vouloir supprimer ce client définitivement ?")) {
-            const { error } = await sb.from('customers').delete().eq('id', id);
-            if (error) alert("Erreur suppression : " + error.message);
-            else location.reload();
-        }
-    }
-
-    // AJOUTER CLIENT
-document.getElementById('addCustomerForm').onsubmit = async (e) => {
-    e.preventDefault();
-    
-    const prenom = document.getElementById('add_prenom').value;
-    const nom = document.getElementById('add_nom').value;
-    const email = document.getElementById('add_email').value;
-
-    // Vérification si la lib est bien chargée
-    if (!phoneAdd) {
-        alert("Erreur d'initialisation du champ téléphone.");
-        return;
-    }
-
-    // getNumber() récupère le format international complet (ex: +213555123456)
-    const phone = phoneAdd.getNumber(); 
-
-    // Vérification de la validité du numéro
-    if (!phoneAdd.isValidNumber()) {
-        alert("Le numéro de téléphone n'est pas valide pour le pays sélectionné.");
-        return;
-    }
-
-    // 1. Insertion dans Supabase avec .select()
-    const { data, error } = await sb.from('customers').insert([{
-        prenom: prenom,
-        nom: nom,
-        telephone: phone, // On enregistre le format +213... en base
-        email: email,
-        business_id: "{{business_id}}",
-        points: 1
-    }]).select();
-
-    if (error) {
-        alert("Erreur Supabase : " + error.message);
-    } else if (data && data.length > 0) {
-        const newCustomerId = data[0].id;
-        const cardUrl = `https://fidelite-app-n2cz.onrender.com/my-card/${newCustomerId}`;
-        
-        const message = `Bonjour ${prenom} ! 👋\n\nBienvenue chez {{nom}} ! ✨\nVotre carte de fidélité est prête avec 1 point offert.\n\nRetrouvez-la ici :\n${cardUrl}`;
-        
-        // On nettoie le numéro pour WhatsApp : on garde uniquement les chiffres (ex: 213555...)
-        const cleanWhatsAppNumber = phone.replace(/\D/g, ''); 
-        
-        const waLink = `https://wa.me/${cleanWhatsAppNumber}?text=${encodeURIComponent(message)}`;
-
-        // 2. Ouverture WhatsApp et rechargement de la page
-        window.open(waLink, '_blank');
-        location.reload();
-    }
-};
-
-    // MODIFIER PASS
-    document.getElementById('changePasswordForm').onsubmit = async (e) => {
-        e.preventDefault();
-        const oldPass = document.getElementById('old_pass').value;
-        const newPass = document.getElementById('new_pass').value;
-        const confirmPass = document.getElementById('confirm_pass').value;
-        const errorDiv = document.getElementById('passError');
-
-        if (newPass !== confirmPass) {
-            errorDiv.innerText = "❌ Incohérence nouveaux mots de passe.";
-            errorDiv.style.display = "block"; return;
-        }
-
-        const { data: { user } } = await sb.auth.getUser();
-        const { error: signInError } = await sb.auth.signInWithPassword({
-            email: user.email, password: oldPass
-        });
-
-        if (signInError) {
-            errorDiv.innerText = "❌ Ancien mot de passe incorrect.";
-            errorDiv.style.display = "block"; return;
-        }
-
-        const { error: updateError } = await sb.auth.updateUser({ password: newPass });
-        if (updateError) { alert(updateError.message); } 
-        else { alert("✅ Mis à jour !"); closeModal('passwordModal'); }
-    };
-
-    // GESTION POINTS
     async function updatePoints(id, d) {
         const row = document.querySelector(`tr[data-id="${id}"]`);
-        const pointsVal = row.querySelector('.points-val');
-        let newPoints = Math.max(0, parseInt(pointsVal.innerText) + d);
-        const { error } = await sb.from('customers').update({ points: newPoints }).eq('id', id);
-        if (!error) { location.reload(); }
+        const val = row.querySelector('.points-val');
+        const newPts = Math.max(0, parseInt(val.innerText) + d);
+        const { error } = await sb.from('customers').update({ points: newPts }).eq('id', id);
+        if (!error) location.reload();
     }
 
     async function offrirCadeau(id) {
-        if(confirm("Confirmer l'utilisation de la récompense ? Le compteur reviendra à 0.")) {
+        if(confirm("Confirmer la récompense ?")) {
             const { error } = await sb.from('customers').update({ points: 0 }).eq('id', id);
-            if(!error) {
-                alert("Récompense validée !");
-                location.reload();
-            } else {
-                alert("Erreur : " + error.message);
-            }
+            if(!error) location.reload();
         }
     }
 
     async function chargerHistorique() {
         const { data: scans } = await sb.from('scans').select('*').eq('business_id', "{{business_id}}").order('created_at', { ascending: false }).limit(5);
         const container = document.getElementById('scansList');
-        if (scans && scans.length > 0) {
+        if (scans?.length > 0) {
             container.innerHTML = scans.map(s => `<div style="display:flex; justify-content:space-between; padding:12px; background:#f8fafc; border-radius:12px; margin-bottom:8px;"><div><div style="font-weight:700;">${s.client_nom}</div><div style="font-size:11px;">${new Date(s.created_at).toLocaleTimeString()}</div></div><div style="color:var(--success); font-weight:800;">+1 PT</div></div>`).join('');
         } else { container.innerHTML = '<p style="font-size:13px;">Aucun scan récent.</p>'; }
     }
@@ -449,15 +473,11 @@ document.getElementById('addCustomerForm').onsubmit = async (e) => {
     window.onload = () => {
         chargerHistorique();
         document.querySelectorAll('tr[data-id]').forEach(r => {
-            const ptsVal = r.querySelector('.points-val');
-            if (ptsVal) {
-                const pts = parseInt(ptsVal.innerText);
-                if(pts >= threshold) {
-                    const pill = r.querySelector('.points-pill');
-                    if(pill) pill.classList.add('ready');
-                    const btn = r.querySelector('.btn-gift');
-                    if(btn) btn.style.display = 'inline-block';
-                }
+            const pts = parseInt(r.querySelector('.points-val')?.innerText || 0);
+            if(pts >= threshold) {
+                r.querySelector('.points-pill')?.classList.add('ready');
+                const btn = r.querySelector('.btn-gift');
+                if(btn) btn.style.display = 'inline-block';
             }
         });
         document.getElementById('currentDate').innerText = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());

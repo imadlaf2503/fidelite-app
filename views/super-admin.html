@@ -9,36 +9,34 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
         
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; color: #1e293b; overflow: hidden; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #ffffff; color: #000000; overflow: hidden; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         
-        /* Style Editeur Clair */
-        .code-editor { font-family: 'Fira Code', monospace; background: #ffffff; border: 1px solid #e2e8f0; color: #475569; font-size: 11px; resize: none; width: 100%; border-radius: 12px; padding: 12px; transition: all 0.2s; }
-        .code-editor:focus { border-color: #6366f1; outline: none; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
+        /* Style Editeur Noir & Blanc */
+        .code-editor { font-family: 'Fira Code', monospace; background: #f8fafc; border: 1px solid #e2e8f0; color: #000000; font-size: 11px; resize: none; width: 100%; border-radius: 12px; padding: 12px; transition: all 0.2s; }
+        .code-editor:focus { border-color: #000000; outline: none; background: #ffffff; }
 
-        .input-pro { background: #ffffff; border: 1px solid #e2e8f0; color: #1e293b; border-radius: 12px; padding: 12px; font-size: 13px; width: 100%; outline: none; transition: all 0.2s; }
-        .input-pro:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
+        .input-pro { background: #f8fafc; border: 1px solid #e2e8f0; color: #000000; border-radius: 12px; padding: 12px; font-size: 13px; width: 100%; outline: none; transition: all 0.2s; }
+        .input-pro:focus { border-color: #000000; background: #ffffff; }
         
-        .section-label { font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em; display: block; margin-bottom: 12px; border-left: 3px solid #6366f1; padding-left: 10px; }
+        .section-label { font-size: 10px; font-weight: 800; color: #000000; text-transform: uppercase; letter-spacing: 0.1em; display: block; margin-bottom: 12px; border-left: 3px solid #000000; padding-left: 10px; }
 
-        .file-upload { position: relative; display: flex; align-items: center; justify-content: center; background: #ffffff; border: 2px dashed #e2e8f0; border-radius: 12px; padding: 20px; cursor: pointer; transition: all 0.2s; }
-        .file-upload:hover { border-color: #6366f1; background: #f1f5ff; }
+        .file-upload { position: relative; display: flex; align-items: center; justify-content: center; background: #f8fafc; border: 2px dashed #e2e8f0; border-radius: 12px; padding: 20px; cursor: pointer; transition: all 0.2s; }
+        .file-upload:hover { border-color: #000000; background: #ffffff; }
 
-        .device-mobile { width: 280px; height: 560px; border: 10px solid #1e293b; border-radius: 40px; overflow: hidden; background: #fff; position: relative; flex-shrink: 0; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.15); }
-        .mobile-notch { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 90px; height: 18px; background: #1e293b; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; z-index: 50; }
-        
-        .glass { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(10px); }
+        .device-mobile { width: 280px; height: 560px; border: 10px solid #000000; border-radius: 40px; overflow: hidden; background: #fff; position: relative; flex-shrink: 0; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.15); }
+        .mobile-notch { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 90px; height: 18px; background: #000000; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; z-index: 50; }
     </style>
 </head>
 <body class="h-screen flex">
 
     <aside class="w-[550px] bg-white border-r border-slate-200 flex flex-col z-30 shadow-xl">
-        <div class="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+        <div class="p-6 border-b border-slate-100 flex items-center justify-between bg-white">
             <div class="flex items-center gap-4">
-                <a href="/admin/inventory" class="text-slate-400 hover:text-slate-900 transition"><i class="fa-solid fa-arrow-left"></i></a>
-                <h1 class="text-lg font-black tracking-tight text-slate-900 uppercase">{{formTitle}}</h1>
+                <a href="/admin/inventory" class="text-slate-400 hover:text-black transition"><i class="fa-solid fa-arrow-left"></i></a>
+                <h1 class="text-lg font-black tracking-tight text-black uppercase">{{formTitle}}</h1>
             </div>
-            <span class="text-[10px] bg-indigo-50 px-2 py-1 rounded text-indigo-600 font-bold font-mono uppercase">Studio v3.1</span>
+            <span class="text-[10px] bg-black px-2 py-1 rounded text-white font-bold font-mono uppercase tracking-widest">Master Studio</span>
         </div>
 
         <form action="{{formAction}}" method="POST" enctype="multipart/form-data" class="flex-grow overflow-y-auto no-scrollbar p-8 space-y-10 pb-10">
@@ -55,20 +53,29 @@
 
             <section>
                 <span class="section-label">Sécurité Dashboard</span>
-                <div class="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100">
-                    <label class="text-[9px] uppercase text-indigo-400 font-black mb-2 block">ID d'accès (Mot de passe commerçant)</label>
-                    <input type="text" name="password" value="{{password}}" placeholder="Ex: 1234" class="input-pro font-bold tracking-widest text-indigo-600 border-indigo-200" required>
+                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <label class="text-[9px] uppercase text-slate-500 font-black mb-2 block">ID d'accès (Mot de passe commerçant)</label>
+                    <input type="text" name="password" value="{{password}}" placeholder="Ex: 1234" class="input-pro font-bold tracking-widest text-black border-slate-200" required>
                 </div>
             </section>
 
             <section>
                 <span class="section-label">Gestion de l'Abonnement</span>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="text-[9px] uppercase text-slate-500 font-bold mb-2 block">Prix Mensuel (€)</label>
-                        <div class="relative">
-                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">€</span>
-                            <input type="number" name="prix_mensuel" value="{{prix}}" placeholder="49" class="input-pro pl-8 font-black text-indigo-600" required>
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-[9px] uppercase text-slate-500 font-bold mb-2 block">Prix Mensuel (€)</label>
+                            <div class="relative">
+                                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">€</span>
+                                <input type="number" name="prix_mensuel" value="{{prix}}" placeholder="49" class="input-pro pl-8 font-black text-black">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-[9px] uppercase text-slate-500 font-bold mb-2 block">Prix Mensuel (DZD)</label>
+                            <div class="relative">
+                                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-[10px]">DA</span>
+                                <input type="number" name="prix_dzd" value="{{prix_dzd}}" placeholder="2500" class="input-pro pl-10 font-black text-black">
+                            </div>
                         </div>
                     </div>
                     <div>
@@ -84,11 +91,11 @@
 
             <section>
                 <span class="section-label">Configuration Enseigne</span>
-                <input type="text" id="in-nom" name="nom" value="{{nom}}" oninput="updatePreview()" placeholder="Nom commercial" class="input-pro mb-4 font-bold text-base text-indigo-600" required>
+                <input type="text" id="in-nom" name="nom" value="{{nom}}" oninput="updatePreview()" placeholder="Nom commercial" class="input-pro mb-4 font-bold text-base text-black" required>
                 
                 <label class="file-upload mb-4">
                     <div class="text-center">
-                        <i class="fa-solid fa-cloud-arrow-up text-indigo-500 text-xl mb-2"></i>
+                        <i class="fa-solid fa-cloud-arrow-up text-black text-xl mb-2"></i>
                         <p class="text-[10px] text-slate-500 uppercase font-extrabold">Logo de l'enseigne</p>
                     </div>
                     <input type="file" name="logo_file" id="in-logo-file" class="hidden" accept="image/*" onchange="previewImage(this)">
@@ -120,7 +127,7 @@
                         </div>
                     </div>
                     <div>
-                        <label class="text-[9px] uppercase text-slate-500 font-bold mb-2 block">Configuration des Paliers (ex: 10:Dessert, 20:Menu)</label>
+                        <label class="text-[9px] uppercase text-slate-500 font-bold mb-2 block">Configuration des Paliers (ex: 10:Dessert)</label>
                         <input type="text" name="points_thresholds" value="{{points_thresholds}}" placeholder="10:Cadeau A, 20:Cadeau B" class="input-pro font-mono text-xs">
                     </div>
                 </div>
@@ -132,7 +139,7 @@
                 <textarea id="in-card-css" name="card_css" oninput="updatePreview()" class="code-editor h-40" placeholder="CSS de la carte...">{{card_css}}</textarea>
             </section>
 
-            <button type="submit" class="w-full bg-slate-900 hover:bg-indigo-600 text-white font-black py-5 rounded-2xl shadow-lg shadow-slate-200 transition transform active:scale-[0.98] uppercase tracking-widest text-xs">
+            <button type="submit" class="w-full bg-black hover:bg-slate-800 text-white font-black py-5 rounded-2xl shadow-xl transition transform active:scale-[0.98] uppercase tracking-widest text-xs">
                 {{submitText}}
             </button>
         </form>
@@ -149,8 +156,8 @@
         </div>
         <div class="mt-8 flex gap-4">
             <div class="px-4 py-2 bg-white border border-slate-200 rounded-full shadow-sm flex items-center gap-2">
-                <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <span class="text-[10px] font-bold text-slate-500">Mode Mobile Actif</span>
+                <div class="w-2 h-2 bg-black rounded-full"></div>
+                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Mode Mobile Actif</span>
             </div>
         </div>
     </main>
