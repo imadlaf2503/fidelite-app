@@ -118,6 +118,13 @@
                 </div>
             </div>
 
+            <div style="margin-top: 15px; padding: 12px; background: #f0f9ff; border-radius: 12px; border: 1px solid #bae6fd;">
+                <p style="font-size: 9px; font-weight: 800; color: #0369a1; margin-bottom: 5px; text-transform: uppercase;">Aide & Support</p>
+                <a href="mailto:fidsaas@gmail.com" style="text-decoration: none; color: #0c4a6e; font-size: 11px; font-weight: 700;">
+                    <i class="fa-solid fa-envelope"></i> fidsaas@gmail.com
+                </a>
+            </div>
+
             <a href="/dashboard/{{slug}}/logout" class="nav-link nav-logout"><i class="fa-solid fa-power-off"></i> Déconnexion</a>
         </nav>
     </aside>
@@ -135,9 +142,14 @@
         <button onclick="openModal('profileSettingsModal'); toggleDrawer();" class="nav-link"><i class="fa-solid fa-user-gear"></i> Mon Profil</button>
         <button onclick="openModal('passwordModal'); toggleDrawer();" class="nav-link"><i class="fa-solid fa-lock"></i> Sécurité</button>
         
-        <div class="sidebar-qr-box" style="margin-bottom: 20px;">
+        <div class="sidebar-qr-box" style="margin-bottom: 10px;">
             <p>QR Code Comptoir</p>
-            <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://fidelite-app-n2cz.onrender.com/signup-client.html?slug={{slug}}">
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://fidelite-app-n2cz.onrender.com/signup/{{slug}}">
+        </div>
+
+        <div style="padding: 12px; background: #f0f9ff; border-radius: 12px; margin-bottom: 20px;">
+            <p style="font-size: 10px; font-weight: 800; color: #0369a1;">SUPPORT</p>
+            <a href="mailto:fidsaas@gmail.com" style="color: #0c4a6e; font-weight: 700; text-decoration: none; font-size: 13px;">fidsaas@gmail.com</a>
         </div>
 
         <a href="/dashboard/{{slug}}/logout" class="nav-link nav-logout" style="margin-top: auto;"><i class="fa-solid fa-power-off"></i> Déconnexion</a>
@@ -182,7 +194,7 @@
         <img src="{{logo_url}}" style="max-height: 100px; margin-bottom: 30px; object-fit: contain;">
         <h1 style="font-size: 60px; font-weight: 900; margin-bottom: 10px; text-transform: uppercase;">Scannez & Gagnez !</h1>
         <p style="font-size: 24px; color: #444; margin-bottom: 50px;">Rejoignez le programme de fidélité de <strong>{{nom}}</strong></p>
-        <img src="https://api.qrserver.com/v1/create-qr-code/?size=450x450&data=https://fidelite-app-n2cz.onrender.com/signup-client.html?slug={{slug}}" style="width: 350px; padding: 15px; background: white; border: 1px solid #eee;">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=450x450&data=https://fidelite-app-n2cz.onrender.com/signup/{{slug}}" style="width: 350px; padding: 15px; background: white; border: 1px solid #eee;">
         <h2 style="margin-top: 50px; font-size: 32px; font-weight: 800;">1 Scan = 1 Point</h2>
         <p style="margin-top: 20px; font-size: 18px; color: #888;">Pas d'application à télécharger, tout est sur votre téléphone.</p>
     </div>
@@ -318,6 +330,7 @@
     function printQR() {
         window.print();
     }
+
     // --- LIMITATION À 50 CLIENTS ---
     function applyPagination() {
         const rows = document.querySelectorAll("#clientRows tr");
@@ -326,82 +339,81 @@
         });
     }
 
-
     // --- AJOUTER / RÉDUIRE POINTS ---
-async function updatePoints(id, val) {
-    const row = document.querySelector(`tr[data-id="${id}"]`);
-    const ptsDisplay = row.querySelector('.points-val');
-    const pill = row.querySelector('.points-pill');
-    const giftBtn = row.querySelector('.btn-gift');
-    
-    try {
-        const res = await fetch(`/dashboard/api/update-points/${id}`, {
+    async function updatePoints(id, val) {
+        const row = document.querySelector(`tr[data-id="${id}"]`);
+        const ptsDisplay = row.querySelector('.points-val');
+        const pill = row.querySelector('.points-pill');
+        const giftBtn = row.querySelector('.btn-gift');
+        
+        try {
+            const res = await fetch(`/dashboard/api/update-points/${id}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ increment: val })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                ptsDisplay.innerText = data.points;
+                const threshold = parseInt("{{threshold}}");
+                if (data.points >= threshold) {
+                    pill.classList.add('ready');
+                    if(giftBtn) giftBtn.style.display = 'inline-block';
+                } else {
+                    pill.classList.remove('ready');
+                    if(giftBtn) giftBtn.style.display = 'none';
+                }
+            }
+        } catch (e) { alert("Erreur réseau"); }
+    }
+
+    // --- SUPPRIMER CLIENT ---
+    async function deleteCustomer(id) {
+        if (!confirm("Supprimer ce client définitivement ?")) return;
+        try {
+            const res = await fetch(`/dashboard/api/delete-customer/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                document.querySelector(`tr[data-id="${id}"]`).remove();
+                applyPagination();
+            }
+        } catch (e) { alert("Erreur lors de la suppression"); }
+    }
+
+    // --- MODIFIER CLIENT ---
+    function openEditModal(id, prenom, nom, tel, email) {
+        document.getElementById('edit_id').value = id;
+        document.getElementById('edit_prenom').value = prenom;
+        document.getElementById('edit_nom').value = nom;
+        document.getElementById('edit_email').value = email;
+        phoneEdit.setNumber(tel);
+        openModal('editMemberModal');
+    }
+
+    document.getElementById('editCustomerForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('edit_id').value;
+        const payload = {
+            prenom: document.getElementById('edit_prenom').value,
+            nom: document.getElementById('edit_nom').value,
+            email: document.getElementById('edit_email').value,
+            telephone: phoneEdit.getNumber()
+        };
+
+        const res = await fetch(`/dashboard/api/update-customer/${id}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ increment: val })
+            body: JSON.stringify(payload)
         });
-        const data = await res.json();
 
-        if (data.success) {
-            ptsDisplay.innerText = data.points;
-            // Gestion visuelle du seuil de cadeau
-            const threshold = parseInt("{{threshold}}");
-            if (data.points >= threshold) {
-                pill.classList.add('ready');
-                if(giftBtn) giftBtn.style.display = 'inline-block';
-            } else {
-                pill.classList.remove('ready');
-                if(giftBtn) giftBtn.style.display = 'none';
-            }
-        }
-    } catch (e) { alert("Erreur réseau"); }
-}
-
-// --- SUPPRIMER CLIENT ---
-async function deleteCustomer(id) {
-    if (!confirm("Supprimer ce client définitivement ?")) return;
-    try {
-        const res = await fetch(`/dashboard/api/delete-customer/${id}`, { method: 'DELETE' });
         if (res.ok) {
-            document.querySelector(`tr[data-id="${id}"]`).remove();
-            applyPagination(); // On rafraîchit la limite après suppression
+            alert("Modifié !");
+            location.reload();
+        } else {
+            alert("Erreur lors de la mise à jour");
         }
-    } catch (e) { alert("Erreur lors de la suppression"); }
-}
-
-// --- MODIFIER CLIENT ---
-function openEditModal(id, prenom, nom, tel, email) {
-    document.getElementById('edit_id').value = id;
-    document.getElementById('edit_prenom').value = prenom;
-    document.getElementById('edit_nom').value = nom;
-    document.getElementById('edit_email').value = email;
-    phoneEdit.setNumber(tel); // Important pour intl-tel-input
-    openModal('editMemberModal');
-}
-
-document.getElementById('editCustomerForm').onsubmit = async (e) => {
-    e.preventDefault();
-    const id = document.getElementById('edit_id').value;
-    const payload = {
-        prenom: document.getElementById('edit_prenom').value,
-        nom: document.getElementById('edit_nom').value,
-        email: document.getElementById('edit_email').value,
-        telephone: phoneEdit.getNumber()
     };
 
-    const res = await fetch(`/dashboard/api/update-customer/${id}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    });
-
-    if (res.ok) {
-        alert("Modifié !");
-        location.reload();
-    } else {
-        alert("Erreur lors de la mise à jour");
-    }
-};
     // --- LOGIQUE PROFIL & SÉCURITÉ ---
     function showEdit(type) {
         document.getElementById(type + 'View').style.display = 'none';
@@ -485,10 +497,19 @@ document.getElementById('editCustomerForm').onsubmit = async (e) => {
         } else alert(error?.message);
     };
 
+    // --- RECHERCHE AVEC LIMITE ---
     function searchMember() {
-        const f = document.getElementById("searchInput").value.toLowerCase();
-        document.querySelectorAll("#clientRows tr").forEach(r => {
-            r.style.display = r.innerText.toLowerCase().includes(f) ? "" : "none";
+        const filter = document.getElementById("searchInput").value.toLowerCase();
+        const rows = document.querySelectorAll("#clientRows tr");
+        let count = 0;
+        rows.forEach(row => {
+            const match = row.innerText.toLowerCase().includes(filter);
+            if (match && count < 50) {
+                row.style.display = "";
+                count++;
+            } else {
+                row.style.display = "none";
+            }
         });
     }
 
@@ -502,10 +523,10 @@ document.getElementById('editCustomerForm').onsubmit = async (e) => {
     }
 
     window.onload = () => {
-    chargerHistorique();
-    applyPagination();
-    document.getElementById('currentDate').innerText = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long' }).format(new Date());
-};
+        chargerHistorique();
+        applyPagination();
+        document.getElementById('currentDate').innerText = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long' }).format(new Date());
+    };
 </script>
 </body>
 </html>
