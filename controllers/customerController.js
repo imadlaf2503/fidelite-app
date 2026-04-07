@@ -113,3 +113,44 @@ exports.getManifest = async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 };
+
+// --- 3. ENREGISTRER UN NOUVEAU CLIENT ---
+exports.registerCustomer = async (req, res) => {
+    try {
+        const { slug } = req.params;
+        const { prenom, nom, email, telephone } = req.body;
+
+        // 1. Trouver l'ID du commerce via le slug
+        const { data: business } = await supabase
+            .from('business')
+            .select('id')
+            .eq('slug', slug)
+            .single();
+
+        if (!business) return res.status(404).send("Commerce non trouvé");
+
+        // 2. Insérer le client dans la table 'customers'
+        const { data: newCustomer, error: insertError } = await supabase
+            .from('customers')
+            .insert([{
+                business_id: business.id,
+                prenom,
+                nom,
+                email,
+                telephone,
+                points: 0 // Nouveau client = 0 points
+            }])
+            .select()
+            .single();
+
+        if (insertError) throw insertError;
+
+        // 3. REDIRECTION VERS LA CARTE (C'est ici que la magie opère)
+        // On redirige vers /my-card/ID_DU_NOUVEAU_CLIENT
+        res.redirect(`/my-card/${newCustomer.id}`);
+
+    } catch (err) {
+        console.error("Erreur Inscription:", err.message);
+        res.status(500).send("Erreur lors de l'inscription : " + err.message);
+    }
+};
