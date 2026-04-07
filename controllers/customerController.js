@@ -54,15 +54,19 @@ exports.getSignupForm = async (req, res) => {
         
         if (!b) return res.status(404).send("Commerce non trouvé");
 
-        res.send(render('signup-customer.html', {
+        // CORRECTION ICI : signup-client.html au lieu de signup-customer.html
+        res.send(render('signup-client.html', {
             nom: b.nom,
             slug: b.slug,
             logo_url: b.config_design.logo_url,
             business_id: b.id,
-            color: b.config_design.primary_color || '#000000'
+            color: b.config_design.primary_color || '#000000',
+            supabase_url: process.env.SUPABASE_URL, // Assure-toi de passer ces clés pour le JS client
+            supabase_key: process.env.SUPABASE_KEY
         }));
     } catch (err) {
-        res.status(500).send("Erreur");
+        console.error(err);
+        res.status(500).send("Erreur lors du chargement de la page d'inscription");
     }
 };
 
