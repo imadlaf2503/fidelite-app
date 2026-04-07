@@ -176,3 +176,59 @@ exports.updatePassword = async (req, res) => {
         res.json({ success: true });
     } catch (err) { res.status(500).json({ success: false, message: "Erreur technique" }); }
 };
+
+// Mise à jour des points (+ ou -)
+exports.updatePoints = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { increment } = req.body; // Reçoit 1 ou -1
+
+        const { data: customer, error: fetchError } = await supabase
+            .from('customers')
+            .select('points')
+            .eq('id', id)
+            .single();
+
+        if (fetchError || !customer) return res.status(404).json({ success: false });
+
+        const nouveauxPoints = Math.max(0, (customer.points || 0) + increment);
+        
+        const { error: updError } = await supabase
+            .from('customers')
+            .update({ points: nouveauxPoints })
+            .eq('id', id);
+
+        if (updError) throw updError;
+        res.json({ success: true, points: nouveauxPoints });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+// Suppression d'un client
+exports.deleteCustomer = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { error } = await supabase.from('customers').delete().eq('id', id);
+        if (error) throw error;
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ success: false });
+    }
+};
+// Modification des informations
+exports.updateCustomerInfo = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { prenom, nom, email, telephone } = req.body;
+
+        const { error } = await supabase
+            .from('customers')
+            .update({ prenom, nom, email, telephone })
+            .eq('id', id);
+
+        if (error) throw error;
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ success: false });
+    }
+};

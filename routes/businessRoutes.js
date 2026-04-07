@@ -17,4 +17,9 @@ router.post('/api/scan/:id', authMiddleware, businessController.handleScan);
 router.post('/api/reset-points/:id', authMiddleware, businessController.resetPoints);
 router.post('/api/update-password/:slug', authMiddleware, businessController.updatePassword);
 
+// ... tes routes existantes
+router.post('/api/update-points/:id', businessController.updatePoints);
+router.delete('/api/delete-customer/:id', businessController.deleteCustomer);
+router.post('/api/update-customer/:id', businessController.updateCustomerInfo);
+
 module.exports = router;

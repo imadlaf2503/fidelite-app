@@ -318,7 +318,90 @@
     function printQR() {
         window.print();
     }
+    // --- LIMITATION À 50 CLIENTS ---
+    function applyPagination() {
+        const rows = document.querySelectorAll("#clientRows tr");
+        rows.forEach((row, index) => {
+            row.style.display = (index < 50) ? "" : "none";
+        });
+    }
 
+
+    // --- AJOUTER / RÉDUIRE POINTS ---
+async function updatePoints(id, val) {
+    const row = document.querySelector(`tr[data-id="${id}"]`);
+    const ptsDisplay = row.querySelector('.points-val');
+    const pill = row.querySelector('.points-pill');
+    const giftBtn = row.querySelector('.btn-gift');
+    
+    try {
+        const res = await fetch(`/dashboard/api/update-points/${id}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ increment: val })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            ptsDisplay.innerText = data.points;
+            // Gestion visuelle du seuil de cadeau
+            const threshold = parseInt("{{threshold}}");
+            if (data.points >= threshold) {
+                pill.classList.add('ready');
+                if(giftBtn) giftBtn.style.display = 'inline-block';
+            } else {
+                pill.classList.remove('ready');
+                if(giftBtn) giftBtn.style.display = 'none';
+            }
+        }
+    } catch (e) { alert("Erreur réseau"); }
+}
+
+// --- SUPPRIMER CLIENT ---
+async function deleteCustomer(id) {
+    if (!confirm("Supprimer ce client définitivement ?")) return;
+    try {
+        const res = await fetch(`/dashboard/api/delete-customer/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+            document.querySelector(`tr[data-id="${id}"]`).remove();
+            applyPagination(); // On rafraîchit la limite après suppression
+        }
+    } catch (e) { alert("Erreur lors de la suppression"); }
+}
+
+// --- MODIFIER CLIENT ---
+function openEditModal(id, prenom, nom, tel, email) {
+    document.getElementById('edit_id').value = id;
+    document.getElementById('edit_prenom').value = prenom;
+    document.getElementById('edit_nom').value = nom;
+    document.getElementById('edit_email').value = email;
+    phoneEdit.setNumber(tel); // Important pour intl-tel-input
+    openModal('editMemberModal');
+}
+
+document.getElementById('editCustomerForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('edit_id').value;
+    const payload = {
+        prenom: document.getElementById('edit_prenom').value,
+        nom: document.getElementById('edit_nom').value,
+        email: document.getElementById('edit_email').value,
+        telephone: phoneEdit.getNumber()
+    };
+
+    const res = await fetch(`/dashboard/api/update-customer/${id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+
+    if (res.ok) {
+        alert("Modifié !");
+        location.reload();
+    } else {
+        alert("Erreur lors de la mise à jour");
+    }
+};
     // --- LOGIQUE PROFIL & SÉCURITÉ ---
     function showEdit(type) {
         document.getElementById(type + 'View').style.display = 'none';
@@ -419,9 +502,10 @@
     }
 
     window.onload = () => {
-        chargerHistorique();
-        document.getElementById('currentDate').innerText = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long' }).format(new Date());
-    };
+    chargerHistorique();
+    applyPagination();
+    document.getElementById('currentDate').innerText = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long' }).format(new Date());
+};
 </script>
 </body>
 </html>
