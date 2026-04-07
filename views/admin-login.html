@@ -135,7 +135,7 @@
             errorBox.innerText = "ERREUR : " + error.message.toUpperCase();
             errorBox.classList.remove('hidden');
         } else {
-            window.location.href = `/admin/inventory?auth=${data.session.access_token}`;
+            window.location.href = window.location.origin + "/admin/inventory?auth=" + data.session.access_token;
         }
     });
 

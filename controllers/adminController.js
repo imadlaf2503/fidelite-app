@@ -15,21 +15,41 @@ const formatDate = (dateStr) => {
 exports.getInventory = async (req, res) => {
     try {
         const token = req.query.auth;
-        const ADMIN_EMAIL = process.env.PROJECT_EMAIL;
+        // On force la minuscule pour éviter les erreurs de frappe dans les variables d'env
+        const ADMIN_EMAIL = (process.env.PROJECT_EMAIL || "").toLowerCase();
 
-        if (!token) return res.redirect('/admin/login');
+        // LOG DE DÉBOGAGE 1 : Vérification de la réception du token
+        if (!token) {
+            console.log("[AUTH CHECK] Aucun token reçu. Redirection vers login.");
+            return res.redirect('/admin/login');
+        }
 
+        // Vérification de la session auprès de Supabase
         const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-        if (authError || !user || user.email !== ADMIN_EMAIL) {
+
+        if (authError || !user) {
+            console.log("[AUTH CHECK] Erreur Supabase ou session invalide:", authError ? authError.message : "Pas d'utilisateur");
+            return res.redirect('/admin/login?error=session_expired');
+        }
+
+        // LOG DE DÉBOGAGE 2 : Comparaison des emails
+        console.log(`[AUTH CHECK] Tentative d'accès : User=${user.email.toLowerCase()} | Attendu=${ADMIN_EMAIL}`);
+
+        if (user.email.toLowerCase() !== ADMIN_EMAIL) {
+            console.log("[AUTH CHECK] Accès refusé : L'email ne correspond pas au PROJECT_EMAIL");
             return res.redirect('/admin/login?error=unauthorized');
         }
 
+        // Si on arrive ici, l'admin est authentifié, on récupère les commerces
         const { data: businesses, error: dbError } = await supabase
             .from('business')
             .select('*')
             .order('created_at', { ascending: false });
 
-        if (dbError) throw dbError;
+        if (dbError) {
+            console.error("[DB ERROR] Impossible de récupérer les commerces:", dbError.message);
+            throw dbError;
+        }
         
         const rowsHtml = (businesses || []).map(b => {
             const statusIcon = b.is_active 
@@ -90,10 +110,9 @@ exports.getInventory = async (req, res) => {
             </tr>`;
         }).join('');
 
-        // --- CALCUL DES REVENUS DISTINCTS ---
+        // Calcul des revenus
         let revenuEuro = 0;
         let revenuDZD = 0;
-
         businesses.forEach(b => {
             if ((b.statut || '').toLowerCase() === 'payé') {
                 revenuEuro += (Number(b.prix_mensuel) || 0);
@@ -103,17 +122,21 @@ exports.getInventory = async (req, res) => {
         
         const rawJsonData = JSON.stringify(businesses.map(b => ({ id: b.id, nom: b.nom, email: b.gestionnaire_email, statut: b.statut })));
 
+        // Envoi final vers le template
         res.send(render('admin-inventory.html', { 
             listCommerçants: rowsHtml, 
             totalCommerces: businesses.length, 
-            revenuTotal: `${revenuEuro}€ / ${revenuDZD} DA`, // On envoie les deux
+            revenuTotal: `${revenuEuro}€ / ${revenuDZD} DA`,
             abonnementsActifs: businesses.filter(b => b.is_active).length, 
             rawJsonData: encodeURIComponent(rawJsonData),
             auth_token: token 
         }));
-    } catch (err) { res.status(500).send(err.message); }
-};
 
+    } catch (err) { 
+        console.error("[CRITICAL ERROR] getInventory:", err.message);
+        res.status(500).send("Erreur serveur : " + err.message); 
+    }
+};
 // --- 2. FORMULAIRE CRÉATION ---
 exports.getCreateForm = (req, res) => {
     res.send(render('super-admin.html', { formTitle: "Nouveau Commerce", formAction: "/admin/api/creer-commerce", submitText: "Déployer le commerce", nom: "", slug: "", g_prenom: "", g_nom: "", g_email: "", g_tel: "", prix: "49", prix_dzd: "2500", couleur: "#6366f1", password: "", points_per_euro: "1", logic_type: "reset", points_thresholds: "10:Café offert, 20:Sandwich offert", card_html: `<div class="card-content">\n  <img src="{{logo_url}}" class="logo">\n  <h2>{{prenom_client}}</h2>\n  <div class="pts">{{points}} PTS</div>\n</div>`, card_css: `.card-view { padding: 20px; text-align: center; }\n.pts { font-size: 40px; font-weight: 900; }` }));
