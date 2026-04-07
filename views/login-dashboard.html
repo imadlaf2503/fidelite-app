@@ -93,6 +93,11 @@
 
     <script>
         const supabaseClient = supabase.createClient("{{supabase_url}}", "{{supabase_key}}");
+        // NOUVEAU : On force la déconnexion locale au cas où
+    window.addEventListener('load', async () => {
+        await supabaseClient.auth.signOut();
+        localStorage.removeItem('sb-token'); // Nettoyage du token
+    });
 
         const loginForm = document.getElementById('loginForm');
         const statusMsg = document.getElementById('statusMsg');

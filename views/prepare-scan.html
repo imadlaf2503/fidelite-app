@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scanner | {{nom}}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 min-h-screen flex flex-col items-center justify-center p-6">
+
+    <div class="bg-white p-8 rounded-3xl shadow-xl w-full max-w-sm text-center">
+        <img src="{{logo_url}}" class="w-24 h-24 mx-auto mb-6 object-contain rounded-2xl border border-slate-100 p-2">
+        
+        <h1 class="text-xl font-black text-slate-900 mb-2">{{nom}}</h1>
+        <p class="text-slate-500 text-sm mb-8">Prêt à scanner une carte client ?</p>
+
+        <a href="/dashboard/scanner/{{slug}}?auth={{auth_token}}" 
+           class="block w-full bg-black text-white font-bold py-4 rounded-2xl hover:bg-slate-800 transition shadow-lg uppercase tracking-widest text-xs">
+            <i class="fa-solid fa-camera mr-2"></i> Activer le scanner
+        </a>
+
+        <a href="/dashboard/{{slug}}?auth={{auth_token}}" class="block mt-6 text-slate-400 text-xs font-bold uppercase tracking-widest">
+            Annuler
+        </a>
+    </div>
+
+</body>
+</html>

@@ -84,7 +84,10 @@
                         <tr>
                             <th class="p-6">Enseigne & Gérant</th>
                             <th class="p-6">Contact / Email</th>
+                            <th class="p-6">Création</th>
                             <th class="p-6 text-center">Status</th>
+                            <th class="p-6 text-center">Dernier Payement</th>
+                            <th class="p-6 text-center">Prochain Payement</th>
                             <th class="p-6 text-right">Actions</th>
                         </tr>
                     </thead>
@@ -119,7 +122,7 @@
                 const urlParams = new URLSearchParams(window.location.search);
                 const token = urlParams.get('auth');
 
-                const response = await fetch(`/api/valider-paiement/${id}`, {
+                const response = await fetch(`/admin/api/valider-paiement/${id}`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
@@ -153,7 +156,7 @@
                 const token = urlParams.get('auth');
 
                 try {
-                    const response = await fetch(`/api/supprimer-commerce/${id}`, {
+                    const response = await fetch(`admin/api/supprimer-commerce/${id}`, {
                         method: 'POST',
                         headers: { 
                             'Authorization': `Bearer ${token}`

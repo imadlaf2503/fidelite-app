@@ -26,6 +26,9 @@
 
         .device-mobile { width: 280px; height: 560px; border: 10px solid #000000; border-radius: 40px; overflow: hidden; background: #fff; position: relative; flex-shrink: 0; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.15); }
         .mobile-notch { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 90px; height: 18px; background: #000000; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; z-index: 50; }
+        
+        /* Conteneur de la carte pour l'aperçu */
+        #card-content { height: 100%; width: 100%; transition: background-color 0.3s; }
     </style>
 </head>
 <body class="h-screen flex">
@@ -163,28 +166,54 @@
     </main>
 
     <script>
-        let currentLogoBase64 = "{{logo_url}}";
-        function previewImage(input) {
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    currentLogoBase64 = e.target.result;
-                    updatePreview();
-                }
-                reader.readAsDataURL(input.files[0]);
+    let currentLogoBase64 = "{{logo_url}}";
+
+    function previewImage(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                currentLogoBase64 = e.target.result;
+                updatePreview();
             }
+            reader.readAsDataURL(input.files[0]);
         }
-        function updatePreview() {
-            document.getElementById('card-style').innerHTML = document.getElementById('in-card-css').value;
-            let html = document.getElementById('in-card-html').value;
-            html = html.replace(/{{prenom_client}}/g, "Jean");
-            html = html.replace(/{{points}}/g, "15");
-            html = html.replace(/{{qr_client}}/g, "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=PREVIEW");
-            document.getElementById('card-content').innerHTML = html;
-            const logoInCard = document.querySelector('#card-content img[src*="logo"]'); 
-            if (logoInCard && currentLogoBase64) { logoInCard.src = currentLogoBase64; }
-        }
-        updatePreview();
-    </script>
+    }
+
+    function updatePreview() {
+        const cardContainer = document.getElementById('card-content');
+        const styleTag = document.getElementById('card-style');
+        
+        // 1. Récupération des valeurs
+        let html = document.getElementById('in-card-html').value;
+        let css = document.getElementById('in-card-css').value;
+        const color = document.getElementById('in-color').value;
+
+        // 2. Nettoyage du CSS (enlève les balises <style> si l'utilisateur les a mises)
+        css = css.replace(/<style>/g, '').replace(/<\/style>/g, '');
+        styleTag.innerHTML = css;
+
+        // 3. Remplacement des variables Studio pour l'aperçu
+        html = html.replace(/{{prenom}}/g, "Mourad");
+        html = html.replace(/{{nom_client}}/g, "Derradj");
+        html = html.replace(/{{points}}/g, "15");
+        html = html.replace(/{{qr_client}}/g, "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=PREVIEW");
+        
+        // Gestion du logo
+        const finalLogo = currentLogoBase64 || 'https://via.placeholder.com/60';
+        html = html.replace(/{{logo_url}}/g, finalLogo);
+        // Si ton code HTML a une balise img fixe comme dans ton exemple :
+        html = html.replace(/src="https:\/\/gtdefwrprbfylhywpoab.supabase.co[^"]*"/g, `src="${finalLogo}"`);
+
+        // 4. Injection avec structure protectrice
+        cardContainer.innerHTML = `
+            <div class="preview-wrapper" style="position:relative; width:100%; height:100%; background-color:${color}; overflow:hidden;">
+                ${html}
+            </div>
+        `;
+    }
+
+    // Initialisation
+    window.onload = updatePreview;
+</script>
 </body>
 </html>

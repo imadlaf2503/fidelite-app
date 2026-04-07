@@ -106,7 +106,7 @@
         <div class="logo-box"><img src="{{logo_url}}"></div>
         <nav class="nav-menu">
             <a href="#" class="nav-link active"><i class="fa-solid fa-house"></i> Accueil</a>
-            <a href="/scanner/{{slug}}?auth={{auth_token}}" class="nav-link"><i class="fa-solid fa-qrcode"></i> Scanner</a>
+            <a href="/dashboard/prepare-scan/{{slug}}?auth={{auth_token}}" class="nav-link"><i class="fa-solid fa-qrcode"></i> Scanner</a>
             <button onclick="openModal('addMemberModal')" class="nav-link"><i class="fa-solid fa-user-plus"></i> Nouveau Membre</button>
             <button onclick="openModal('profileSettingsModal')" class="nav-link"><i class="fa-solid fa-user-gear"></i> Mon Profil</button>
             <button onclick="openModal('passwordModal')" class="nav-link"><i class="fa-solid fa-lock"></i> Modifier mot de passe</button>
@@ -120,7 +120,7 @@
 
     <nav class="mobile-nav">
         <a href="#" class="mobile-link active"><i class="fa-solid fa-house"></i><span>Home</span></a>
-        <a href="/scanner/{{slug}}?auth={{auth_token}}" class="mobile-link"><div class="scan-fab"><i class="fa-solid fa-camera"></i></div><span>Scanner</span></a>
+        <a href="/dashboard/{{slug}}/scanner?auth={{auth_token}}" class="mobile-link"><div class="scan-fab"><i class="fa-solid fa-camera"></i></div><span>Scanner</span></a>
         <button onclick="toggleDrawer()" class="mobile-link"><i class="fa-solid fa-bars"></i><span>Menu</span></button>
     </nav>
 
@@ -287,34 +287,23 @@
 <script>
     const sb = window.supabase.createClient('{{supabase_url}}', '{{supabase_key}}');
     const threshold = {{threshold}};
-    
-    // Initialisations Téléphone
-    const phoneAdd = window.intlTelInput(document.querySelector("#add_phone"), {
-        initialCountry: "auto",
-        separateDialCode: true,
-        geoIpLookup: s => fetch("https://ipapi.co/json").then(r => r.json()).then(d => s(d.country_code)).catch(() => s("fr")),
-        utilsScript: "https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/utils.js"
-    });
 
-    const phoneEdit = window.intlTelInput(document.querySelector("#edit_phone"), {
-        initialCountry: "auto",
+    // --- INITIALISATION DES INPUTS TÉLÉPHONE (intl-tel-input) ---
+    const phoneConfig = {
+        initialCountry: "fr", // Algérie par défaut, change en "fr" pour la France
+        preferredCountries: ["dz", "fr", "ma", "tn"],
         separateDialCode: true,
-        utilsScript: "https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/utils.js"
-    });
+        utilsScript: "https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/utils.js",
+    };
 
-    const phoneProfile = window.intlTelInput(document.querySelector("#new_phone_input"), {
-        initialCountry: "auto",
-        separateDialCode: true,
-        utilsScript: "https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/utils.js"
-    });
-    
+    const phoneAdd = window.intlTelInput(document.querySelector("#add_phone"), phoneConfig);
+    const phoneEdit = window.intlTelInput(document.querySelector("#edit_phone"), phoneConfig);
+    const phoneProfile = window.intlTelInput(document.querySelector("#new_phone_input"), phoneConfig);
+
+    // --- FONCTIONS MODALS ---
     function openModal(id) { document.getElementById(id).style.display = 'flex'; }
     function closeModal(id) { 
         document.getElementById(id).style.display = 'none'; 
-        if(id === 'passwordModal') {
-            document.getElementById('pwStep1').style.display = 'block';
-            document.getElementById('pwStep2').style.display = 'none';
-        }
     }
     
     function toggleDrawer() { 
@@ -324,81 +313,65 @@
         else { d.style.right = '0px'; o.style.display = 'block'; }
     }
 
-    // GESTION PROFIL
-    function showEmailEdit() { document.getElementById('emailView').style.display='none'; document.getElementById('emailEdit').style.display='block'; }
-    function showPhoneEdit() { document.getElementById('phoneView').style.display='none'; document.getElementById('phoneEdit').style.display='block'; }
-
-    async function requestEmailOTP() {
-        const newEmail = document.getElementById('new_email').value;
-        if(!newEmail) return alert("Entrez le nouvel email");
-        // Logique Supabase OTP par SMS pour changement d'email
-        const { error } = await sb.auth.signInWithOtp({ phone: '{{telephone}}' }); // Envoi au tel actuel
-        if(error) alert(error.message);
-        else document.getElementById('emailOtpGroup').style.display = 'block';
-    }
-
-    async function verifyEmailChange() {
-        const token = document.getElementById('email_otp_code').value;
-        const newEmail = document.getElementById('new_email').value;
-        const { error } = await sb.auth.updateUser({ email: newEmail }, { emailRedirectTo: window.location.href });
-        if(error) alert(error.message);
-        else alert("✅ Email mis à jour !"); location.reload();
-    }
-
-    async function requestPhoneOTP() {
-        // Logique Supabase OTP par Email pour changement de téléphone
-        const { error } = await sb.auth.signInWithOtp({ email: '{{email}}' });
-        if(error) alert(error.message);
-        else document.getElementById('phoneOtpGroup').style.display = 'block';
-    }
-
-    async function verifyPhoneChange() {
-        const token = document.getElementById('phone_otp_code').value;
-        const newPhone = phoneProfile.getNumber();
-        const { error } = await sb.auth.updateUser({ phone: newPhone });
-        if(error) alert(error.message);
-        else alert("✅ Téléphone mis à jour !"); location.reload();
-    }
-
-    // MOT DE PASSE AVEC OTP
-    document.getElementById('requestPwOTP').onsubmit = async (e) => {
+    // --- CRÉATION MEMBRE + WHATSAPP ---
+    document.getElementById('addCustomerForm').onsubmit = async (e) => {
         e.preventDefault();
-        const method = document.querySelector('input[name="otp_method"]:checked').value;
-        const { data: { user } } = await sb.auth.getUser();
         
-        let config = method === 'email' ? { email: user.email } : { phone: user.phone };
-        const { error } = await sb.auth.signInWithOtp(config);
+        // On récupère le numéro au format international (ex: +213...)
+        const fullPhone = phoneAdd.getNumber();
         
-        if(error) alert(error.message);
-        else {
-            document.getElementById('pwStep1').style.display = 'none';
-            document.getElementById('pwStep2').style.display = 'block';
+        if (!phoneAdd.isValidNumber()) {
+            return alert("Numéro de téléphone invalide. Vérifiez le format.");
+        }
+
+        const prenom = document.getElementById('add_prenom').value;
+        const nom = document.getElementById('add_nom').value;
+
+        const { data, error } = await sb.from('customers').insert([{
+            prenom: prenom,
+            nom: nom,
+            telephone: fullPhone,
+            email: document.getElementById('add_email').value,
+            business_id: "{{business_id}}",
+            points: 1
+        }]).select();
+
+        if (error) {
+            alert("Erreur : " + error.message);
+        } else if (data?.[0]) {
+            const customerId = data[0].id;
+            const businessName = "{{nom}}";
+            
+            // --- CONSTRUCTION DU MESSAGE WHATSAPP ---
+            const message = `Bonjour ${prenom} ! 👋\n\nBienvenue chez *${businessName}* ! ✨\n\nVoici votre carte de fidélité digitale. Gardez ce lien précieusement pour cumuler vos points :\n\n🔗 https://fidelite-app-n2cz.onrender.com/my-card/${customerId}\n\nÀ très bientôt !`;
+            
+            // Nettoyage du numéro pour l'URL WhatsApp (garder uniquement les chiffres)
+            const cleanPhone = fullPhone.replace(/\D/g, '');
+            
+            // Ouverture de WhatsApp dans un nouvel onglet
+            const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+            window.open(whatsappUrl, '_blank');
+
+            // Recharger la page après un court délai
+            setTimeout(() => location.reload(), 500);
         }
     };
 
-    document.getElementById('changePasswordForm').onsubmit = async (e) => {
-        e.preventDefault();
-        const newPass = document.getElementById('new_pass').value;
-        const confirmPass = document.getElementById('confirm_pass').value;
-        const otp = document.getElementById('pw_otp_code').value;
+    // --- RECHERCHE ---
+    function searchMember() {
+        const f = document.getElementById("searchInput").value.toLowerCase();
+        document.querySelectorAll("#membersTable tbody tr").forEach(r => {
+            r.style.display = r.textContent.toLowerCase().includes(f) ? "" : "none";
+        });
+    }
 
-        if (newPass !== confirmPass) {
-            document.getElementById('passError').innerText = "❌ Incohérence mots de passe.";
-            document.getElementById('passError').style.display = "block"; return;
-        }
-
-        const { error } = await sb.auth.updateUser({ password: newPass });
-        if (error) alert(error.message);
-        else { alert("✅ Mot de passe changé !"); closeModal('passwordModal'); }
-    };
-
-    // --- LOGIQUE CLIENTS EXISTANTE (CONSERVÉE) ---
+    // --- ÉDITION MEMBRE ---
     function openEditModal(id, prenom, nom, tel, email) {
         document.getElementById('edit_id').value = id;
         document.getElementById('edit_prenom').value = prenom;
         document.getElementById('edit_nom').value = nom;
         document.getElementById('edit_email').value = (email && email !== 'undefined') ? email : '';
-        try { phoneEdit.setNumber(tel || ""); } catch(e) { document.getElementById('edit_phone').value = tel; }
+        phoneEdit.setNumber(tel || "");
         openModal('editMemberModal');
     }
 
@@ -413,73 +386,24 @@
         if (error) alert(error.message); else location.reload();
     };
 
-    async function deleteCustomer(id) {
-        if (confirm("Supprimer ce client ?")) {
-            const { error } = await sb.from('customers').delete().eq('id', id);
-            if (error) alert(error.message); else location.reload();
-        }
-    }
-
-    document.getElementById('addCustomerForm').onsubmit = async (e) => {
-        e.preventDefault();
-        const phone = phoneAdd.getNumber();
-        if (!phoneAdd.isValidNumber()) return alert("Numéro invalide");
-        
-        const { data, error } = await sb.from('customers').insert([{
-            prenom: document.getElementById('add_prenom').value,
-            nom: document.getElementById('add_nom').value,
-            telephone: phone,
-            email: document.getElementById('add_email').value,
-            business_id: "{{business_id}}",
-            points: 1
-        }]).select();
-
-        if (error) alert(error.message);
-        else if (data?.[0]) {
-            const msg = `Bonjour ${data[0].prenom} ! 👋\nBienvenue chez {{nom}} ! ✨\nVotre carte : https://fidelite-app-n2cz.onrender.com/my-card/${data[0].id}`;
-            window.open(`https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`, '_blank');
-            location.reload();
-        }
-    };
-
-    async function updatePoints(id, d) {
-        const row = document.querySelector(`tr[data-id="${id}"]`);
-        const val = row.querySelector('.points-val');
-        const newPts = Math.max(0, parseInt(val.innerText) + d);
-        const { error } = await sb.from('customers').update({ points: newPts }).eq('id', id);
-        if (!error) location.reload();
-    }
-
-    async function offrirCadeau(id) {
-        if(confirm("Confirmer la récompense ?")) {
-            const { error } = await sb.from('customers').update({ points: 0 }).eq('id', id);
-            if(!error) location.reload();
-        }
-    }
-
+    // --- AUTRES FONCTIONS ---
     async function chargerHistorique() {
         const { data: scans } = await sb.from('scans').select('*').eq('business_id', "{{business_id}}").order('created_at', { ascending: false }).limit(5);
         const container = document.getElementById('scansList');
         if (scans?.length > 0) {
-            container.innerHTML = scans.map(s => `<div style="display:flex; justify-content:space-between; padding:12px; background:#f8fafc; border-radius:12px; margin-bottom:8px;"><div><div style="font-weight:700;">${s.client_nom}</div><div style="font-size:11px;">${new Date(s.created_at).toLocaleTimeString()}</div></div><div style="color:var(--success); font-weight:800;">+1 PT</div></div>`).join('');
+            container.innerHTML = scans.map(s => `
+                <div style="display:flex; justify-content:space-between; padding:12px; background:#f8fafc; border-radius:12px; margin-bottom:8px;">
+                    <div>
+                        <div style="font-weight:700;">${s.client_nom}</div>
+                        <div style="font-size:11px;">${new Date(s.created_at).toLocaleTimeString()}</div>
+                    </div>
+                    <div style="color:var(--success); font-weight:800;">+1 PT</div>
+                </div>`).join('');
         } else { container.innerHTML = '<p style="font-size:13px;">Aucun scan récent.</p>'; }
-    }
-
-    function searchMember() {
-        const f = document.getElementById("searchInput").value.toLowerCase();
-        document.querySelectorAll("#membersTable tbody tr").forEach(r => r.style.display = r.textContent.toLowerCase().includes(f) ? "" : "none");
     }
 
     window.onload = () => {
         chargerHistorique();
-        document.querySelectorAll('tr[data-id]').forEach(r => {
-            const pts = parseInt(r.querySelector('.points-val')?.innerText || 0);
-            if(pts >= threshold) {
-                r.querySelector('.points-pill')?.classList.add('ready');
-                const btn = r.querySelector('.btn-gift');
-                if(btn) btn.style.display = 'inline-block';
-            }
-        });
         document.getElementById('currentDate').innerText = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
     };
 </script>
