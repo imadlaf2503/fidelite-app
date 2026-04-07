@@ -93,33 +93,58 @@
     </div>
 
     <script>
-        const { createClient } = window.supabase; 
-        const supabaseClient = createClient('{{supabase_url}}', '{{supabase_key}}');
+    const { createClient } = window.supabase;
+    let supabaseClient;
 
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('email').value.trim();
-            const password = document.getElementById('password').value;
-            const btn = document.getElementById('btnText');
-            const errorBox = document.getElementById('errorMessage');
+    // Initialisation dynamique
+    async function init() {
+        try {
+            const response = await fetch('/admin/api/config');
+            const config = await response.json();
+            supabaseClient = createClient(config.url, config.key);
+        } catch (err) {
+            console.error("Erreur de chargement de la config");
+        }
+    }
 
-            btn.innerHTML = '<i class="fa-solid fa-circle-notch animate-spin"></i>';
-            btn.disabled = true;
-            errorBox.classList.add('hidden');
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!supabaseClient) await init(); // Sécurité si pas encore chargé
 
-            const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+        const email = document.getElementById('email').value.trim();
+        const password = document.getElementById('password').value;
+        const btn = document.getElementById('btnText');
+        const errorBox = document.getElementById('errorMessage');
 
-            if (error) {
-                btn.innerHTML = '<span>S\'authentifier</span> <i class="fa-solid fa-arrow-right text-xs"></i>';
-                btn.disabled = false;
-                errorBox.innerText = "ERREUR : " + error.message.toUpperCase();
-                errorBox.classList.remove('hidden');
-            } else {
-                window.location.href = `/admin/inventory?auth=${data.session.access_token}`;
-            }
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch animate-spin"></i>';
+        btn.disabled = true;
+        errorBox.classList.add('hidden');
+
+        const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+
+        // On envoie le log au serveur Render
+        fetch('/admin/api/log-auth', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ email, status: error ? 'ÉCHEC' : 'SUCCÈS' })
         });
 
-        window.onload = () => document.getElementById('email').focus();
-    </script>
+        if (error) {
+            btn.innerHTML = '<span>S\'authentifier</span> <i class="fa-solid fa-arrow-right text-xs"></i>';
+            btn.disabled = false;
+            errorBox.innerText = "ERREUR : " + error.message.toUpperCase();
+            errorBox.classList.remove('hidden');
+        } else {
+            window.location.href = `/admin/inventory?auth=${data.session.access_token}`;
+        }
+    });
+
+    window.onload = () => {
+        init();
+        document.getElementById('email').focus();
+    };
+</script>
+</body>
+</html>
 </body>
 </html>
