@@ -4,5 +4,6 @@ const customerController = require('../controllers/customerController');
 
 router.get('/my-card/:id', customerController.getCard);
 router.get('/signup/:slug', customerController.getSignupForm);
+router.get('/manifest.json', customerController.getManifest);
 
 module.exports = router;

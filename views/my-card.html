@@ -3,7 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Carte Fidélité</title>
+    <title>{{nom}} | Carte</title>
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="{{nom}}">
+    <link rel="apple-touch-icon" href="{{logo_url}}">
+
+    <link rel="manifest" href="/manifest.json?id={{customer_id}}">
+    <meta name="theme-color" content="#000000">
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
@@ -40,7 +49,6 @@
             transition: opacity 0.3s ease;
         }
 
-        /* --- L'ANIMATION GOLD (FORCÉE) --- */
         .is-gold {
             background: linear-gradient(135deg, #bf953f, #fcf6ba, #b38728, #fbf5b7, #aa771c) !important;
             animation: goldPulse 0.6s infinite alternate !important;
@@ -51,7 +59,6 @@
             100% { box-shadow: 0 0 40px #ffd700; transform: scale(1.05); }
         }
 
-        /* --- ANIMATIONS DE BASE --- */
         @keyframes cardFadeIn { 0% { transform: translateY(-20px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
         
         .shine-effect::after {
@@ -62,7 +69,6 @@
         }
         @keyframes shineAnim { 0% { left: -100%; } 100% { left: 150%; } }
 
-        /* --- SPLASH SCREEN --- */
         #splash-screen {
             position: fixed; inset: 0; background: #fff; z-index: 9999;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -91,7 +97,6 @@
 
     <script>
         const _supabase = supabase.createClient("{{supabase_url}}", "{{supabase_key}}");
-        // On récupère le palier dynamiquement
         const threshold = parseInt("{{threshold}}") || 10;
         
         function triggerUpdate(newPts) {
@@ -100,19 +105,14 @@
             const studioBg = document.querySelector('.studio-bg');
             const ptsDisplay = document.querySelector('.pts-value');
             
-            // 1. Update points & Shine
             if(ptsDisplay) { ptsDisplay.innerText = newPts; }
             card.classList.add('shine-effect');
             setTimeout(() => card.classList.remove('shine-effect'), 800);
 
-            // 2. Logique Gold au Palier
             if (newPts > 0 && newPts % threshold === 0) {
-                // On applique l'or sur la CARTE elle-même
                 card.classList.add('is-gold');
-                
-                // On cache temporairement le fond orange et le contenu
                 if(studioBg) studioBg.style.opacity = "0";
-                container.style.opacity = "0.3"; // On laisse deviner le contenu en dessous
+                container.style.opacity = "0.3";
 
                 setTimeout(() => {
                     card.classList.remove('is-gold');

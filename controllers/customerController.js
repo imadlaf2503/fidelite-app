@@ -65,3 +65,47 @@ exports.getSignupForm = async (req, res) => {
         res.status(500).send("Erreur");
     }
 };
+
+exports.getManifest = async (req, res) => {
+    try {
+        const customerId = req.query.id;
+        if (!customerId) return res.status(400).send("ID manquant");
+
+        // Récupérer le client et les infos du commerce (logo, nom)
+        const { data: customer, error } = await supabase
+            .from('customers')
+            .select('*, business(*)')
+            .eq('id', customerId)
+            .single();
+
+        if (error || !customer) return res.status(404).send("Non trouvé");
+
+        // On construit le manifest
+        const manifest = {
+            "short_name": customer.business.nom,
+            "name": `Fidélité ${customer.business.nom}`,
+            "icons": [
+                {
+                    "src": customer.business.config_design.logo_url,
+                    "sizes": "192x192",
+                    "type": "image/png",
+                    "purpose": "any maskable"
+                },
+                {
+                    "src": customer.business.config_design.logo_url,
+                    "sizes": "512x512",
+                    "type": "image/png"
+                }
+            ],
+            "start_url": `/my-card/${customer.id}`,
+            "background_color": "#000000",
+            "theme_color": "#000000",
+            "display": "standalone",
+            "orientation": "portrait"
+        };
+
+        res.json(manifest);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
