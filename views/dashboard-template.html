@@ -374,31 +374,41 @@
     };
 
     document.getElementById('updatePasswordForm').onsubmit = async (e) => {
-        e.preventDefault();
-        const old_password = document.getElementById('old_pass').value;
-        const new_password = document.getElementById('new_pass').value;
-        const confirm_password = document.getElementById('confirm_pass').value;
+    e.preventDefault();
+    const old_password = document.getElementById('old_pass').value;
+    const new_password = document.getElementById('new_pass').value;
+    const confirm_password = document.getElementById('confirm_pass').value;
 
-        if (new_password !== confirm_password) {
-            return alert("Les nouveaux mots de passe ne correspondent pas.");
+    if (new_password !== confirm_password) {
+        return alert("Les nouveaux mots de passe ne correspondent pas.");
+    }
+
+    // On récupère le token qui est dans l'URL actuelle (?auth=...)
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('auth');
+
+    try {
+        const res = await fetch(`/dashboard/api/update-password/{{slug}}`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}` // On envoie le token ici
+            },
+            body: JSON.stringify({ old_password, new_password })
+        });
+        
+        const data = await res.json();
+        if (data.success) {
+            alert("Mot de passe mis à jour !");
+            closeModal('passwordModal');
+            location.reload();
+        } else {
+            alert(data.message || "Erreur lors de la mise à jour");
         }
-
-        try {
-            const res = await fetch(`/dashboard/api/update-password/{{slug}}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ old_password, new_password })
-            });
-            const data = await res.json();
-            if (data.success) {
-                alert("Mot de passe mis à jour !");
-                closeModal('passwordModal');
-                location.reload();
-            } else {
-                alert(data.message || "Erreur lors de la mise à jour");
-            }
-        } catch (err) { alert("Erreur technique"); }
-    };
+    } catch (err) { 
+        alert("Erreur technique : " + err.message); 
+    }
+};
 
     document.getElementById('addCustomerForm').onsubmit = async (e) => {
         e.preventDefault();

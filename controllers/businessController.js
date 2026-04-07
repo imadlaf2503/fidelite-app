@@ -128,7 +128,7 @@ exports.getScannerPage = async (req, res) => {
 // --- 4. API ACTIONS ---
 exports.handleScan = async (req, res) => {
     try {
-        const identifierFromScanner = req.params.id; // Le slug
+        const identifierFromScanner = req.params.id; 
         const { customer_id } = req.body; 
         if (!customer_id) return res.status(400).json({ success: false, message: "ID client manquant" });
 
@@ -158,30 +158,52 @@ exports.resetPoints = async (req, res) => {
     } catch (err) { res.status(500).send("Erreur"); }
 };
 
+// --- MISE À JOUR MOT DE PASSE (CORRIGÉE) ---
 exports.updatePassword = async (req, res) => {
     try {
         const { slug } = req.params;
         const { old_password, new_password } = req.body;
-        const { data: b } = await supabase.from('business').select('*').eq('slug', slug).single();
-        
-        const { data: authTest, error: authError } = await supabase.auth.signInWithPassword({
-            email: b.gestionnaire_email, password: old_password.trim()
+
+        // 1. Chercher l'email du business
+        const { data: b, error: bErr } = await supabase.from('business').select('*').eq('slug', slug).single();
+        if (bErr || !b) return res.status(404).json({ success: false, message: "Business non trouvé" });
+
+        console.log(`Tentative de changement pass pour : ${b.gestionnaire_email}`);
+
+        // 2. Vérifier l'ancien mot de passe en se connectant
+        const { error: authError } = await supabase.auth.signInWithPassword({
+            email: b.gestionnaire_email,
+            password: old_password.trim()
         });
 
-        if (authError) return res.status(401).json({ success: false, message: "Ancien mot de passe incorrect." });
+        if (authError) {
+            console.error("Erreur Auth Supabase:", authError.message);
+            return res.status(401).json({ success: false, message: "Ancien mot de passe incorrect." });
+        }
 
-        await supabase.auth.admin.updateUserById(authTest.user.id, { password: new_password.trim() });
+        // 3. Mettre à jour avec le nouveau mot de passe (session active)
+        const { error: updateError } = await supabase.auth.updateUser({
+            password: new_password.trim()
+        });
+
+        if (updateError) {
+            return res.status(500).json({ success: false, message: "Erreur lors de la mise à jour : " + updateError.message });
+        }
+
+        // 4. Synchroniser dans la table business
         await supabase.from('business').update({ password: new_password.trim() }).eq('slug', slug);
 
         res.json({ success: true });
-    } catch (err) { res.status(500).json({ success: false, message: "Erreur technique" }); }
+    } catch (err) {
+        console.error("Erreur technique updatePassword:", err);
+        res.status(500).json({ success: false, message: "Erreur technique serveur" });
+    }
 };
 
-// Mise à jour des points (+ ou -)
 exports.updatePoints = async (req, res) => {
     try {
         const { id } = req.params;
-        const { increment } = req.body; // Reçoit 1 ou -1
+        const { increment } = req.body; 
 
         const { data: customer, error: fetchError } = await supabase
             .from('customers')
@@ -204,7 +226,7 @@ exports.updatePoints = async (req, res) => {
         res.status(500).json({ success: false, message: err.message });
     }
 };
-// Suppression d'un client
+
 exports.deleteCustomer = async (req, res) => {
     try {
         const { id } = req.params;
@@ -215,7 +237,7 @@ exports.deleteCustomer = async (req, res) => {
         res.status(500).json({ success: false });
     }
 };
-// Modification des informations
+
 exports.updateCustomerInfo = async (req, res) => {
     try {
         const { id } = req.params;
