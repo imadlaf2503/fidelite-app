@@ -75,8 +75,6 @@
         .modal-input { width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--border); margin: 8px 0 16px; outline: none; font-size: 14px; }
         .modal-btn { width: 100%; background: var(--primary); color: white; border: none; padding: 14px; border-radius: 12px; font-weight: 700; cursor: pointer; }
         
-        .otp-group { display: none; margin-top: 15px; padding: 15px; background: #f8fafc; border-radius: 16px; border: 1px dashed var(--border); }
-
         /* --- MOBILE --- */
         .mobile-nav, .mobile-drawer, .drawer-overlay { display: none; }
         @media (max-width: 992px) {
@@ -189,60 +187,38 @@
     </main>
 </div>
 
-<div id="printableQR" style="display:none;">
-    <div style="padding: 60px; text-align: center; font-family: 'Inter', sans-serif; border: 20px solid black; min-height: 100vh;">
-        <img src="{{logo_url}}" style="max-height: 100px; margin-bottom: 30px; object-fit: contain;">
-        <h1 style="font-size: 60px; font-weight: 900; margin-bottom: 10px; text-transform: uppercase;">Scannez & Gagnez !</h1>
-        <p style="font-size: 24px; color: #444; margin-bottom: 50px;">Rejoignez le programme de fidélité de <strong>{{nom}}</strong></p>
-        <img src="https://api.qrserver.com/v1/create-qr-code/?size=450x450&data=https://fidelite-app-n2cz.onrender.com/signup/{{slug}}" style="width: 350px; padding: 15px; background: white; border: 1px solid #eee;">
-        <h2 style="margin-top: 50px; font-size: 32px; font-weight: 800;">1 Scan = 1 Point</h2>
-        <p style="margin-top: 20px; font-size: 18px; color: #888;">Pas d'application à télécharger, tout est sur votre téléphone.</p>
+<div id="supportInfoModal" class="modal">
+    <div class="modal-box" style="text-align: center;">
+        <i class="fa-solid fa-circle-info" style="font-size: 40px; color: var(--warning); margin-bottom: 15px;"></i>
+        <h3 style="margin:0 0 15px; font-weight: 800;">Information</h3>
+        <p style="font-size: 14px; color: var(--text-light); margin-bottom: 20px; text-align: left;">
+            Cette fonctionnalité va bientôt être rajoutée dans votre système. 
+            Si vous voulez en savoir plus ou si vous voulez faire des modifications, n'hésitez pas à envoyer un mail au support et on vous contactera.
+        </p>
+        <a href="mailto:fidsaas@gmail.com" style="display: block; background: #f1f5f9; padding: 12px; border-radius: 12px; color: var(--text); font-weight: 700; text-decoration: none; margin-bottom: 20px; border: 1px solid var(--border);">
+            <i class="fa-solid fa-envelope"></i> fidsaas@gmail.com
+        </a>
+        <button onclick="closeModal('supportInfoModal')" class="modal-btn">D'accord</button>
     </div>
 </div>
 
 <div id="profileSettingsModal" class="modal">
     <div class="modal-box">
-        <h3 style="margin:0 0 20px; font-weight: 800;">Modifier mes coordonnées</h3>
+        <h3 style="margin:0 0 20px; font-weight: 800;">Mon Profil</h3>
         
         <div style="margin-bottom:25px; padding-bottom:15px; border-bottom:1px solid var(--border);">
-            <label style="font-size:11px; font-weight:700; color:var(--text-light); text-transform:uppercase;">Email Actuel</label>
-            <div id="emailView" style="display:flex; justify-content:space-between; align-items:center; margin-top:5px;">
+            <label style="font-size:11px; font-weight:700; color:var(--text-light); text-transform:uppercase;">Email de gestion</label>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:5px;">
                 <span style="font-weight:600;">{{email}}</span>
-                <button onclick="showEdit('email')" class="btn-edit" style="border:none; background:none; cursor:pointer;"><i class="fa-solid fa-pen"></i></button>
-            </div>
-            <div id="emailEdit" style="display:none; margin-top:10px;">
-                <input type="email" id="new_email" placeholder="Nouvel email" class="modal-input">
-                <p style="font-size:11px; margin-bottom:10px;">Recevoir le code de confirmation par :</p>
-                <div style="display:flex; gap:15px; margin-bottom:15px;">
-                    <label style="font-size:12px;"><input type="radio" name="email_otp_method" value="email" checked> Ancien Email</label>
-                    <label style="font-size:12px;"><input type="radio" name="email_otp_method" value="sms"> SMS</label>
-                </div>
-                <button onclick="requestProfileOTP('email')" class="modal-btn" id="btnEmailRequest">Envoyer le code</button>
-                <div id="emailOtpGroup" class="otp-group">
-                    <input type="text" id="email_otp_code" placeholder="Code de vérification" class="modal-input">
-                    <button onclick="verifyProfileChange('email')" class="modal-btn">Valider le changement</button>
-                </div>
+                <button onclick="switchToSupportModal()" class="btn-edit" style="border:none; background:none; cursor:pointer;"><i class="fa-solid fa-pen"></i></button>
             </div>
         </div>
 
-        <div>
-            <label style="font-size:11px; font-weight:700; color:var(--text-light); text-transform:uppercase;">Téléphone Actuel</label>
-            <div id="phoneView" style="display:flex; justify-content:space-between; align-items:center; margin-top:5px;">
+        <div style="margin-bottom:10px;">
+            <label style="font-size:11px; font-weight:700; color:var(--text-light); text-transform:uppercase;">Téléphone</label>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:5px;">
                 <span style="font-weight:600;">{{telephone}}</span>
-                <button onclick="showEdit('phone')" class="btn-edit" style="border:none; background:none; cursor:pointer;"><i class="fa-solid fa-pen"></i></button>
-            </div>
-            <div id="phoneEdit" style="display:none; margin-top:10px;">
-                <input type="tel" id="new_phone_profile" class="modal-input">
-                <p style="font-size:11px; margin-top:10px; margin-bottom:10px;">Recevoir le code de confirmation par :</p>
-                <div style="display:flex; gap:15px; margin-bottom:15px;">
-                    <label style="font-size:12px;"><input type="radio" name="phone_otp_method" value="email" checked> Email</label>
-                    <label style="font-size:12px;"><input type="radio" name="phone_otp_method" value="sms"> Ancien Numéro</label>
-                </div>
-                <button onclick="requestProfileOTP('phone')" class="modal-btn" id="btnPhoneRequest">Envoyer le code</button>
-                <div id="phoneOtpGroup" class="otp-group">
-                    <input type="text" id="phone_otp_code" placeholder="Code de vérification" class="modal-input">
-                    <button onclick="verifyProfileChange('phone')" class="modal-btn">Valider le changement</button>
-                </div>
+                <button onclick="switchToSupportModal()" class="btn-edit" style="border:none; background:none; cursor:pointer;"><i class="fa-solid fa-pen"></i></button>
             </div>
         </div>
         <button type="button" onclick="closeModal('profileSettingsModal')" style="width: 100%; background: none; border: none; margin-top: 20px; color: var(--text-light); cursor: pointer;">Fermer</button>
@@ -252,22 +228,19 @@
 <div id="passwordModal" class="modal">
     <div class="modal-box">
         <h3 style="margin:0 0 10px; font-weight: 800;">Sécurité du compte</h3>
-        <div id="pwStep1">
-            <input type="password" id="old_pass" placeholder="Mot de passe actuel" class="modal-input">
-            <input type="password" id="new_pass" placeholder="Nouveau mot de passe" class="modal-input">
-            <input type="password" id="confirm_pass" placeholder="Confirmer nouveau" class="modal-input">
-            <p style="font-size:11px; margin-bottom:10px;">Canal de vérification :</p>
-            <div style="display:flex; gap:15px; margin-bottom:15px;">
-                <label style="font-size:12px;"><input type="radio" name="pw_otp_method" value="email" checked> Email</label>
-                <label style="font-size:12px;"><input type="radio" name="pw_otp_method" value="sms"> SMS</label>
-            </div>
-            <button onclick="requestPasswordOTP()" class="modal-btn">Envoyer le code</button>
-            <p onclick="forgotPassword()" style="font-size:12px; color:var(--danger); text-align:center; margin-top:15px; cursor:pointer; font-weight:700;">Mot de passe oublié ?</p>
-        </div>
-        <div id="pwStep2" style="display:none;">
-            <input type="text" id="pw_otp_code" placeholder="Code reçu" class="modal-input">
-            <button onclick="verifyPasswordChange()" class="modal-btn">Confirmer la modification</button>
-        </div>
+        <p style="font-size: 12px; color: var(--text-light); margin-bottom: 20px;">Modifiez votre mot de passe ci-dessous.</p>
+        
+        <form id="updatePasswordForm">
+            <input type="password" id="old_pass" placeholder="Mot de passe actuel" class="modal-input" required>
+            <input type="password" id="new_pass" placeholder="Nouveau mot de passe" class="modal-input" required>
+            <input type="password" id="confirm_pass" placeholder="Confirmer nouveau" class="modal-input" required>
+            <button type="submit" class="modal-btn">Enregistrer</button>
+        </form>
+
+        <p style="font-size:11px; color:var(--text-light); text-align:center; margin-top:20px;">
+            Mot de passe oublié ? Contactez le support :<br>
+            <a href="mailto:fidsaas@gmail.com" style="color: var(--primary); font-weight: 700; text-decoration: none;">fidsaas@gmail.com</a>
+        </p>
         <button type="button" onclick="closeModal('passwordModal')" style="width: 100%; background: none; border: none; margin-top: 15px; color: var(--text-light); cursor: pointer;">Annuler</button>
     </div>
 </div>
@@ -316,10 +289,16 @@
 
     const phoneAdd = window.intlTelInput(document.querySelector("#add_phone"), itiConfig);
     const phoneEdit = window.intlTelInput(document.querySelector("#edit_phone"), itiConfig);
-    let phoneProfile;
 
     function openModal(id) { document.getElementById(id).style.display = 'flex'; }
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    
+    // NOUVELLE FONCTION : Ferme Profil et ouvre Information
+    function switchToSupportModal() {
+        closeModal('profileSettingsModal');
+        openModal('supportInfoModal');
+    }
+
     function toggleDrawer() {
         const d = document.getElementById('mobileDrawer');
         const o = document.getElementById('drawerOverlay');
@@ -327,19 +306,13 @@
         o.style.display = (o.style.display === 'block') ? 'none' : 'block';
     }
 
-    function printQR() {
-        window.print();
-    }
+    function printQR() { window.print(); }
 
-    // --- LIMITATION À 50 CLIENTS ---
     function applyPagination() {
         const rows = document.querySelectorAll("#clientRows tr");
-        rows.forEach((row, index) => {
-            row.style.display = (index < 50) ? "" : "none";
-        });
+        rows.forEach((row, index) => { row.style.display = (index < 50) ? "" : "none"; });
     }
 
-    // --- AJOUTER / RÉDUIRE POINTS ---
     async function updatePoints(id, val) {
         const row = document.querySelector(`tr[data-id="${id}"]`);
         const ptsDisplay = row.querySelector('.points-val');
@@ -353,7 +326,6 @@
                 body: JSON.stringify({ increment: val })
             });
             const data = await res.json();
-
             if (data.success) {
                 ptsDisplay.innerText = data.points;
                 const threshold = parseInt("{{threshold}}");
@@ -368,19 +340,14 @@
         } catch (e) { alert("Erreur réseau"); }
     }
 
-    // --- SUPPRIMER CLIENT ---
     async function deleteCustomer(id) {
         if (!confirm("Supprimer ce client définitivement ?")) return;
         try {
             const res = await fetch(`/dashboard/api/delete-customer/${id}`, { method: 'DELETE' });
-            if (res.ok) {
-                document.querySelector(`tr[data-id="${id}"]`).remove();
-                applyPagination();
-            }
+            if (res.ok) { document.querySelector(`tr[data-id="${id}"]`).remove(); applyPagination(); }
         } catch (e) { alert("Erreur lors de la suppression"); }
     }
 
-    // --- MODIFIER CLIENT ---
     function openEditModal(id, prenom, nom, tel, email) {
         document.getElementById('edit_id').value = id;
         document.getElementById('edit_prenom').value = prenom;
@@ -399,84 +366,40 @@
             email: document.getElementById('edit_email').value,
             telephone: phoneEdit.getNumber()
         };
-
         const res = await fetch(`/dashboard/api/update-customer/${id}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
-
-        if (res.ok) {
-            alert("Modifié !");
-            location.reload();
-        } else {
-            alert("Erreur lors de la mise à jour");
-        }
+        if (res.ok) { alert("Modifié !"); location.reload(); } else alert("Erreur");
     };
 
-    // --- LOGIQUE PROFIL & SÉCURITÉ ---
-    function showEdit(type) {
-        document.getElementById(type + 'View').style.display = 'none';
-        document.getElementById(type + 'Edit').style.display = 'block';
-        if(type === 'phone' && !phoneProfile) {
-            phoneProfile = window.intlTelInput(document.querySelector("#new_phone_profile"), itiConfig);
+    document.getElementById('updatePasswordForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const old_password = document.getElementById('old_pass').value;
+        const new_password = document.getElementById('new_pass').value;
+        const confirm_password = document.getElementById('confirm_pass').value;
+
+        if (new_password !== confirm_password) {
+            return alert("Les nouveaux mots de passe ne correspondent pas.");
         }
-    }
 
-    async function requestProfileOTP(type) {
-        const method = document.querySelector(`input[name="${type}_otp_method"]:checked`).value;
-        const target = (method === 'email') ? '{{email}}' : '{{telephone}}';
-        const btn = document.getElementById(type === 'email' ? 'btnEmailRequest' : 'btnPhoneRequest');
-        btn.innerText = "Envoi...";
-        const { error } = await sb.auth.signInWithOtp(method === 'email' ? { email: target } : { phone: target });
-        if(error) { alert(error.message); btn.innerText = "Renvoyer"; }
-        else { btn.style.display = 'none'; document.getElementById(type + 'OtpGroup').style.display = 'block'; alert("Code envoyé !"); }
-    }
+        try {
+            const res = await fetch(`/dashboard/api/update-password/{{slug}}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ old_password, new_password })
+            });
+            const data = await res.json();
+            if (data.success) {
+                alert("Mot de passe mis à jour !");
+                closeModal('passwordModal');
+                location.reload();
+            } else {
+                alert(data.message || "Erreur lors de la mise à jour");
+            }
+        } catch (err) { alert("Erreur technique"); }
+    };
 
-    async function verifyProfileChange(type) {
-        const code = document.getElementById(type + '_otp_code').value;
-        const newValue = (type === 'email') ? document.getElementById('new_email').value : phoneProfile.getNumber();
-        const method = document.querySelector(`input[name="${type}_otp_method"]:checked`).value;
-        const target = (method === 'email') ? '{{email}}' : '{{telephone}}';
-        const { error: otpErr } = await sb.auth.verifyOtp({ [method]: target, token: code, type: (method === 'email' ? 'signup' : 'sms') });
-        if(otpErr) return alert("Code incorrect.");
-        const updateData = (type === 'email') ? { email: newValue } : { phone: newValue };
-        const { error: updErr } = await sb.auth.updateUser(updateData);
-        if(updErr) alert(updErr.message); else { alert("Modifié avec succès !"); location.reload(); }
-    }
-
-    async function requestPasswordOTP() {
-        const oldPass = document.getElementById('old_pass').value;
-        if(!oldPass) return alert("Entrez votre mot de passe actuel.");
-        const { error: authErr } = await sb.auth.signInWithPassword({ email: '{{email}}', password: oldPass });
-        if(authErr) return alert("Ancien mot de passe incorrect.");
-        const method = document.querySelector('input[name="pw_otp_method"]:checked').value;
-        const target = (method === 'email') ? '{{email}}' : '{{telephone}}';
-        const { error } = await sb.auth.signInWithOtp(method === 'email' ? { email: target } : { phone: target });
-        if(!error) { document.getElementById('pwStep1').style.display='none'; document.getElementById('pwStep2').style.display='block'; } else alert(error.message);
-    }
-
-    async function verifyPasswordChange() {
-        const n1 = document.getElementById('new_pass').value;
-        const n2 = document.getElementById('confirm_pass').value;
-        if(n1 !== n2) return alert("Les mots de passe ne correspondent pas.");
-        const code = document.getElementById('pw_otp_code').value;
-        const method = document.querySelector('input[name="pw_otp_method"]:checked').value;
-        const target = (method === 'email') ? '{{email}}' : '{{telephone}}';
-        const { error: otpErr } = await sb.auth.verifyOtp({ [method]: target, token: code, type: (method === 'email' ? 'signup' : 'sms') });
-        if(otpErr) return alert("Code invalide.");
-        const { error } = await sb.auth.updateUser({ password: n1 });
-        if(!error) { alert("Mot de passe mis à jour !"); location.reload(); } else alert(error.message);
-    }
-
-    async function forgotPassword() {
-        const email = prompt("Entrez votre email de connexion :");
-        if(!email) return;
-        const { error } = await sb.auth.resetPasswordForEmail(email);
-        alert(error ? error.message : "Email de réinitialisation envoyé !");
-    }
-
-    // --- GESTION CLIENTS & WHATSAPP ---
     document.getElementById('addCustomerForm').onsubmit = async (e) => {
         e.preventDefault();
         const fullPhone = phoneAdd.getNumber();
@@ -497,19 +420,13 @@
         } else alert(error?.message);
     };
 
-    // --- RECHERCHE AVEC LIMITE ---
     function searchMember() {
         const filter = document.getElementById("searchInput").value.toLowerCase();
         const rows = document.querySelectorAll("#clientRows tr");
         let count = 0;
         rows.forEach(row => {
             const match = row.innerText.toLowerCase().includes(filter);
-            if (match && count < 50) {
-                row.style.display = "";
-                count++;
-            } else {
-                row.style.display = "none";
-            }
+            if (match && count < 50) { row.style.display = ""; count++; } else { row.style.display = "none"; }
         });
     }
 
