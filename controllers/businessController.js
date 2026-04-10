@@ -152,10 +152,22 @@ exports.handleScan = async (req, res) => {
 
 exports.resetPoints = async (req, res) => {
     try {
-        const { data: customer } = await supabase.from('customers').select('business(slug)').eq('id', req.params.id).single();
-        await supabase.from('customers').update({ points: 0 }).eq('id', req.params.id);
-        res.redirect(`/dashboard/${customer.business.slug}`);
-    } catch (err) { res.status(500).send("Erreur"); }
+        const { id } = req.params;
+
+        // Mise à jour des points à 0 dans Supabase
+        const { error } = await supabase
+            .from('customers')
+            .update({ points: 0 })
+            .eq('id', id);
+
+        if (error) throw error;
+
+        // On renvoie une réponse de succès au format JSON
+        res.json({ success: true, message: "Récompense validée, points réinitialisés." });
+    } catch (err) {
+        console.error("Erreur resetPoints:", err);
+        res.status(500).json({ success: false, message: "Erreur lors de la remise à zéro" });
+    }
 };
 
 // --- MISE À JOUR MOT DE PASSE (CORRIGÉE) ---

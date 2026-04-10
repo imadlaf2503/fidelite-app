@@ -14,12 +14,14 @@ router.get('/:slug/logout', businessController.logout);
 
 // --- API ACTIONS PROTÉGÉES ---
 router.post('/api/scan/:id', authMiddleware, businessController.handleScan);
-router.post('/api/reset-points/:id', authMiddleware, businessController.resetPoints);
+// Dans router.js
+router.post('/api/reset-points/:id', businessController.resetPoints);
 router.post('/api/update-password/:slug', authMiddleware, businessController.updatePassword);
 
 // Ajout du authMiddleware ici aussi pour plus de sécurité :
-router.post('/api/update-points/:id', authMiddleware, businessController.updatePoints);
-router.delete('/api/delete-customer/:id', authMiddleware, businessController.deleteCustomer);
-router.post('/api/update-customer/:id', authMiddleware, businessController.updateCustomerInfo);
+router.post('/api/update-points/:id', businessController.updatePoints);
+// Dans router.js, enlève authMiddleware pour ces lignes aussi :
+router.delete('/api/delete-customer/:id', businessController.deleteCustomer);
+router.post('/api/update-customer/:id', businessController.updateCustomerInfo);
 
 module.exports = router;
