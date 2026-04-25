@@ -102,7 +102,7 @@
         <div class="logo-box"><img src="{{logo_url}}"></div>
         <nav class="nav-menu">
             <a href="#" class="nav-link active"><i class="fa-solid fa-house"></i> Accueil</a>
-            <a href="/dashboard/prepare-scan/{{slug}}?auth={{auth_token}}" class="nav-link"><i class="fa-solid fa-qrcode"></i> Scanner</a>
+            <a href="/dashboard/scanner/{{slug}}?auth={{auth_token}}" class="nav-link"><i class="fa-solid fa-qrcode"></i> Scanner</a>
             <button onclick="openModal('addMemberModal')" class="nav-link"><i class="fa-solid fa-user-plus"></i> Nouveau Membre</button>
             <button onclick="openModal('profileSettingsModal')" class="nav-link"><i class="fa-solid fa-user-gear"></i> Mon Profil</button>
             <button onclick="openModal('passwordModal')" class="nav-link"><i class="fa-solid fa-lock"></i> Sécurité</button>
@@ -129,7 +129,7 @@
 
     <nav class="mobile-nav">
         <a href="#" class="mobile-link active"><i class="fa-solid fa-house"></i><span>Home</span></a>
-        <a href="/dashboard/{{slug}}/scanner?auth={{auth_token}}" class="mobile-link"><div class="scan-fab"><i class="fa-solid fa-camera"></i></div><span>Scanner</span></a>
+        <a href="/dashboard/scanner/{{slug}}?auth={{auth_token}}" class="mobile-link"><div class="scan-fab"><i class="fa-solid fa-camera"></i></div><span>Scanner</span></a>
         <button onclick="toggleDrawer()" class="mobile-link"><i class="fa-solid fa-bars"></i><span>Menu</span></button>
     </nav>
 
@@ -205,7 +205,6 @@
 <div id="profileSettingsModal" class="modal">
     <div class="modal-box">
         <h3 style="margin:0 0 20px; font-weight: 800;">Mon Profil</h3>
-        
         <div style="margin-bottom:25px; padding-bottom:15px; border-bottom:1px solid var(--border);">
             <label style="font-size:11px; font-weight:700; color:var(--text-light); text-transform:uppercase;">Email de gestion</label>
             <div style="display:flex; justify-content:space-between; align-items:center; margin-top:5px;">
@@ -213,7 +212,6 @@
                 <button onclick="switchToSupportModal()" class="btn-edit" style="border:none; background:none; cursor:pointer;"><i class="fa-solid fa-pen"></i></button>
             </div>
         </div>
-
         <div style="margin-bottom:10px;">
             <label style="font-size:11px; font-weight:700; color:var(--text-light); text-transform:uppercase;">Téléphone</label>
             <div style="display:flex; justify-content:space-between; align-items:center; margin-top:5px;">
@@ -229,14 +227,12 @@
     <div class="modal-box">
         <h3 style="margin:0 0 10px; font-weight: 800;">Sécurité du compte</h3>
         <p style="font-size: 12px; color: var(--text-light); margin-bottom: 20px;">Modifiez votre mot de passe ci-dessous.</p>
-        
         <form id="updatePasswordForm">
             <input type="password" id="old_pass" placeholder="Mot de passe actuel" class="modal-input" required>
             <input type="password" id="new_pass" placeholder="Nouveau mot de passe" class="modal-input" required>
             <input type="password" id="confirm_pass" placeholder="Confirmer nouveau" class="modal-input" required>
             <button type="submit" class="modal-btn">Enregistrer</button>
         </form>
-
         <p style="font-size:11px; color:var(--text-light); text-align:center; margin-top:20px;">
             Mot de passe oublié ? Contactez le support :<br>
             <a href="mailto:fidsaas@gmail.com" style="color: var(--primary); font-weight: 700; text-decoration: none;">fidsaas@gmail.com</a>
@@ -279,8 +275,6 @@
 
 <script>
     const sb = window.supabase.createClient('{{supabase_url}}', '{{supabase_key}}');
-    
-    // On récupère le token d'auth une seule fois pour tout le script
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('auth');
 
@@ -316,7 +310,6 @@
         rows.forEach((row, index) => { row.style.display = (index < 50) ? "" : "none"; });
     }
 
-    // --- MISE À JOUR DES POINTS (CORRIGÉ) ---
     async function updatePoints(id, val) {
         const row = document.querySelector(`tr[data-id="${id}"]`);
         const ptsDisplay = row.querySelector('.points-val');
@@ -328,7 +321,7 @@
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}` // AJOUTÉ : Pour passer le middleware
+                    'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({ increment: val })
             });
@@ -337,8 +330,6 @@
             if (data.success) {
                 ptsDisplay.innerText = data.points;
                 const threshold = parseInt("{{threshold}}") || 10;
-                
-                // Mise à jour visuelle du badge "Prêt"
                 if (data.points >= threshold) {
                     pill.classList.add('ready');
                     if(giftBtn) giftBtn.style.display = 'inline-block';
@@ -352,13 +343,12 @@
         } catch (e) { alert("Erreur réseau"); }
     }
 
-    // --- SUPPRESSION (CORRIGÉ) ---
     async function deleteCustomer(id) {
         if (!confirm("Supprimer ce client définitivement ?")) return;
         try {
             const res = await fetch(`/dashboard/api/delete-customer/${id}`, { 
                 method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` } // AJOUTÉ
+                headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) { 
                 document.querySelector(`tr[data-id="${id}"]`).remove(); 
@@ -375,123 +365,71 @@
         phoneEdit.setNumber(tel);
         openModal('editMemberModal');
     }
-    // Fonction pour réinitialiser les points une fois le cadeau donné
-async function offrirCadeau(id) {
-    // 1. Demander confirmation pour éviter les clics accidentels
-    if (!confirm("Voulez-vous valider ce cadeau ? Les points du client seront remis à zéro.")) {
-        return;
+
+    async function offrirCadeau(id) {
+        if (!confirm("Voulez-vous valider ce cadeau ? Les points du client seront remis à zéro.")) return;
+        try {
+            const res = await fetch(`/dashboard/api/reset-points/${id}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await res.json();
+            if (data.success) {
+                const row = document.querySelector(`tr[data-id="${id}"]`);
+                if (row) {
+                    row.querySelector('.points-val').innerText = "0";
+                    row.querySelector('.points-pill').classList.remove('ready');
+                    row.querySelector('.btn-gift').style.display = 'none';
+                }
+                alert("Points réinitialisés avec succès !");
+            } else {
+                alert("Erreur : " + (data.message || "Impossible de réinitialiser"));
+            }
+        } catch (err) { alert("Erreur de connexion."); }
     }
 
-    try {
-        // 2. Appel à l'API (assure-toi que la route /api/reset-points/:id existe dans ton router)
-        const res = await fetch(`/dashboard/api/reset-points/${id}`, {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json'
-                // Ajoute l'Authorization si tu as remis le middleware
-                // 'Authorization': `Bearer ${token}` 
-            }
-        });
-
-        const data = await res.json();
-
-        if (data.success) {
-            // 3. Mise à jour visuelle immédiate sans recharger la page
-            const row = document.querySelector(`tr[data-id="${id}"]`);
-            if (row) {
-                // Remettre les points à 0
-                const ptsDisplay = row.querySelector('.points-val');
-                if (ptsDisplay) ptsDisplay.innerText = "0";
-
-                // Enlever la couleur verte du badge
-                const pill = row.querySelector('.points-pill');
-                if (pill) pill.classList.remove('ready');
-
-                // Cacher le bouton cadeau
-                const giftBtn = row.querySelector('.btn-gift');
-                if (giftBtn) giftBtn.style.display = 'none';
-            }
-            alert("Points réinitialisés avec succès !");
-        } else {
-            alert("Erreur : " + (data.message || "Impossible de réinitialiser les points"));
-        }
-    } catch (err) {
-        console.error("Erreur lors de l'appel reset-points:", err);
-        alert("Erreur de connexion au serveur.");
-    }
-}
-
-    // --- MODIFICATION INFOS (CORRIGÉ) ---
     document.getElementById('editCustomerForm').onsubmit = async (e) => {
-    e.preventDefault();
-    const id = document.getElementById('edit_id').value;
-    
-    // On s'assure d'avoir les données propres
-    const payload = {
-        prenom: document.getElementById('edit_prenom').value,
-        nom: document.getElementById('edit_nom').value,
-        email: document.getElementById('edit_email').value,
-        telephone: phoneEdit.getNumber()
+        e.preventDefault();
+        const id = document.getElementById('edit_id').value;
+        const payload = {
+            prenom: document.getElementById('edit_prenom').value,
+            nom: document.getElementById('edit_nom').value,
+            email: document.getElementById('edit_email').value,
+            telephone: phoneEdit.getNumber()
+        };
+        try {
+            const res = await fetch(`/dashboard/api/update-customer/${id}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (res.ok) { alert("Client modifié !"); location.reload(); }
+            else alert("Erreur lors de la modification");
+        } catch (err) { alert("Erreur technique."); }
     };
 
-    try {
-        // Utilisation d'un chemin ABSOLU commençant par /
-        const res = await fetch(`/dashboard/api/update-customer/${id}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-
-        if (res.ok) {
-            alert("Client modifié avec succès !");
-            location.reload();
-        } else {
-            const errorData = await res.json();
-            alert("Erreur serveur : " + (errorData.message || "Erreur inconnue"));
-        }
-    } catch (err) {
-        console.error("Erreur Fetch détaillée:", err);
-        alert("Impossible de contacter le serveur. Vérifiez que votre terminal Node.js tourne bien.");
-    }
-};
-
-    // --- MOT DE PASSE (VÉRIFIÉ) ---
     document.getElementById('updatePasswordForm').onsubmit = async (e) => {
         e.preventDefault();
         const old_password = document.getElementById('old_pass').value;
         const new_password = document.getElementById('new_pass').value;
         const confirm_password = document.getElementById('confirm_pass').value;
-
-        if (new_password.length < 6) return alert("Le mot de passe doit faire au moins 6 caractères.");
-        if (new_password !== confirm_password) return alert("Les nouveaux mots de passe ne correspondent pas.");
-
+        if (new_password !== confirm_password) return alert("Mots de passe différents");
         try {
             const res = await fetch(`/dashboard/api/update-password/{{slug}}`, {
                 method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({ old_password, new_password })
             });
-            
             const data = await res.json();
-            if (data.success) {
-                alert("Mot de passe mis à jour !");
-                closeModal('passwordModal');
-                location.reload();
-            } else {
-                alert(data.message || "Erreur lors de la mise à jour");
-            }
+            if (data.success) { alert("Mot de passe mis à jour !"); location.reload(); }
+            else alert(data.message);
         } catch (err) { alert("Erreur technique"); }
     };
 
-    // --- AJOUT CLIENT (VIA SDK SUPABASE) ---
     document.getElementById('addCustomerForm').onsubmit = async (e) => {
         e.preventDefault();
         const fullPhone = phoneAdd.getNumber();
         if(!phoneAdd.isValidNumber()) return alert("Numéro invalide");
-        
         const prenom = document.getElementById('add_prenom').value;
         const { data, error } = await sb.from('customers').insert([{
             prenom: prenom,
@@ -501,7 +439,6 @@ async function offrirCadeau(id) {
             business_id: "{{business_id}}",
             points: 1
         }]).select();
-
         if(!error && data?.[0]) {
             const msg = `Bonjour ${prenom} ! 👋\nBienvenue chez *{{nom}}* !\nVoici votre carte : https://fidelite-app-n2cz.onrender.com/my-card/${data[0].id}`;
             window.open(`https://wa.me/${fullPhone.replace(/\D/g,'')}?text=${encodeURIComponent(msg)}`, '_blank');
