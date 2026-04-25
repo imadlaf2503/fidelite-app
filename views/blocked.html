@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accès Bloqué | FidSaaS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-white text-black min-h-screen flex items-center justify-center p-6">
+    <div class="max-w-md w-full text-center">
+        <div class="mb-8">
+            <div class="w-20 h-20 bg-red-50 text-red-600 rounded-3xl flex items-center justify-center mx-auto mb-4 border border-red-100">
+                <i class="fa-solid fa-lock text-3xl"></i>
+            </div>
+            <h1 class="text-2xl font-black uppercase tracking-tight">Accès Bloqué</h1>
+            <p class="text-slate-500 font-bold text-xs uppercase tracking-widest mt-2">Abonnement expiré ou suspendu</p>
+        </div>
+
+        <div class="bg-slate-50 border border-slate-100 rounded-2xl p-6 mb-8">
+            <p class="text-sm text-slate-600 font-medium leading-relaxed">
+                Votre accès au dashboard commerçant a été restreint. Pour réactiver vos cartes de fidélité et retrouver vos données :
+            </p>
+            <div class="mt-4 pt-4 border-t border-slate-200">
+                <a href="mailto:fidsaas@gmail.com" class="text-black font-black text-sm underline decoration-2 underline-offset-4">
+                    fidsaas@gmail.com
+                </a>
+            </div>
+        </div>
+
+        <div class="flex flex-col gap-3">
+            <a href="/login" class="bg-black text-white py-4 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-800 transition">
+                Réessayer la connexion
+            </a>
+            <button onclick="window.history.back()" class="text-slate-400 font-bold text-[10px] uppercase tracking-[0.2em] hover:text-black transition">
+                Retour
+            </button>
+        </div>
+        
+        <p class="mt-10 text-[10px] font-bold text-slate-300 uppercase tracking-widest">
+            &copy; 2026 Tamurtia Systems
+        </p>
+    </div>
+</body>
+</html>

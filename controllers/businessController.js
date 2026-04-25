@@ -1,6 +1,18 @@
 const supabase = require('../config/supabase');
 const render = require('../utils/renderer');
 
+// Cette fonction vérifie si le commerce est actif ou payé
+const verifyAccess = (business) => {
+    if (!business) return { allowed: false, reason: "notFound" };
+    
+    const isExpired = business.statut !== 'payé' && business.statut !== 'essai';
+    const isDeactivated = !business.is_active;
+
+    if (isDeactivated || isExpired) {
+        return { allowed: false, reason: "blocked" };
+    }
+    return { allowed: true };
+};
 // --- 1. DASHBOARD PRINCIPAL ---
 exports.getDashboard = async (req, res) => {
     try {
@@ -9,6 +21,12 @@ exports.getDashboard = async (req, res) => {
 
         const { data: b, error: bError } = await supabase.from('business').select('*').eq('slug', slug).single();
         if (bError || !b) return res.status(404).send("Commerce inconnu");
+
+        // --- VÉRIFICATION ACCÈS ---
+        const access = verifyAccess(b);
+        if (!access.allowed) {
+            return res.send(render('blocked.html', { email_support: "fidsaas@gmail.com" }));
+        }
 
         const { data: customers } = await supabase
             .from('customers')
@@ -20,13 +38,13 @@ exports.getDashboard = async (req, res) => {
         const totalClients = customers ? customers.length : 0;
         const pointsTotal = (customers || []).reduce((acc, c) => acc + (parseInt(c.points) || 0), 0);
 
+        // ... (reste de ton code tableRows inchangé) ...
         const tableRows = (customers || []).map(c => {
-            const isReady = (parseInt(c.points) || 0) >= REWARD_THRESHOLD;
-            const safePrenom = (c.prenom || '').replace(/'/g, "\\'");
-            const safeNom = (c.nom || '').replace(/'/g, "\\'");
-            const customerId = c.id;
-
-            return `
+             const isReady = (parseInt(c.points) || 0) >= REWARD_THRESHOLD;
+             const safePrenom = (c.prenom || '').replace(/'/g, "\\'");
+             const safeNom = (c.nom || '').replace(/'/g, "\\'");
+             const customerId = c.id;
+             return `
                 <tr data-id="${customerId}" class="hover:bg-slate-50 transition border-b border-slate-100">
                     <td class="p-4">
                         <div style="font-weight: 800; color:#0f172a">${c.prenom} ${c.nom}</div>
@@ -82,6 +100,22 @@ exports.getDashboard = async (req, res) => {
     } catch (e) { res.status(500).send("Erreur serveur"); }
 };
 
+// --- SYSTÈME DE SCAN (Sécurisé aussi) ---
+exports.getScannerPage = async (req, res) => {
+    try {
+        const { slug } = req.params;
+        const token = req.query.auth;
+        const { data: b } = await supabase.from('business').select('*').eq('slug', slug).single();
+        if (!b) return res.status(404).send("Commerce inconnu");
+
+        // --- VÉRIFICATION ACCÈS ---
+        if (!verifyAccess(b).allowed) {
+            return res.send(render('blocked.html', { email_support: "fidsaas@gmail.com" }));
+        }
+
+        res.send(render('scanner.html', { nom: b.nom, logo_url: b.config_design.logo_url, slug: b.slug, auth_token: token }));
+    } catch (err) { res.status(500).send("Erreur"); }
+};
 // --- 2. AUTHENTIFICATION ---
 exports.getLogin = async (req, res) => {
     try {

@@ -344,3 +344,27 @@ exports.updateBusiness = async (req, res) => {
         res.status(500).send("Erreur lors de la mise à jour : " + err.message);
     }
 };
+// --- 8. SUPPRIMER UN COMMERCE ---
+exports.deleteBusiness = async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        // 1. Supprimer le commerce dans la table 'business'
+        // Note: Si tes tables 'customers' et 'scans' n'ont pas de "ON DELETE CASCADE", 
+        // tu devras peut-être les supprimer manuellement avant.
+        const { error: dbError } = await supabase
+            .from('business')
+            .delete()
+            .eq('id', id);
+
+        if (dbError) throw dbError;
+
+        // 2. Optionnel : Tu peux aussi supprimer l'utilisateur de Supabase Auth ici 
+        // si tu as l'ID de l'utilisateur, mais la suppression DB est le plus important.
+
+        res.json({ success: true, message: "Le commerce a été supprimé avec succès." });
+    } catch (err) {
+        console.error("Erreur suppression:", err.message);
+        res.status(500).json({ success: false, message: "Erreur lors de la suppression : " + err.message });
+    }
+};

@@ -149,32 +149,38 @@
             } catch(e) { console.error(e); }
         }
 
-        async function deleteBusiness(id, name) {
-            if (confirm(`⚠️ ATTENTION : Es-tu sûr de vouloir supprimer définitivement "${name}" ?\n\nCette action supprimera le commerce, ses clients et son accès de connexion.`)) {
-                
-                const urlParams = new URLSearchParams(window.location.search);
-                const token = urlParams.get('auth');
+       async function deleteBusiness(id, name) {
+    if (confirm(`⚠️ Confirmer la suppression définitive de "${name}" ?`)) {
+        
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('auth');
 
-                try {
-                    const response = await fetch(`admin/api/supprimer-commerce/${id}`, {
-                        method: 'POST',
-                        headers: { 
-                            'Authorization': `Bearer ${token}`
-                        }
-                    });
-
-                    const result = await response.json();
-                    if (result.success) {
-                        alert(result.message);
-                        location.reload();
-                    } else {
-                        alert("Erreur : " + result.message);
-                    }
-                } catch (err) {
-                    alert("Erreur lors de la communication avec le serveur.");
+        try {
+            // LE CORRECTIF EST ICI : On commence par /admin pour repartir de la racine
+            const response = await fetch(`/admin/api/supprimer-commerce/${id}`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json'
                 }
+            });
+
+            if (!response.ok) {
+                throw new Error("Erreur serveur (code " + response.status + ")");
             }
+
+            const result = await response.json();
+            if (result.success) {
+                alert("Commerce supprimé !");
+                location.reload();
+            } else {
+                alert("Erreur : " + result.message);
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Erreur lors de la communication avec le serveur.");
         }
+    }
+}
     </script>
 </body>
 </html>

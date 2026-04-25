@@ -38,5 +38,6 @@ router.post('/api/log-auth', (req, res) => {
     console.log(`[AUTH] Tentative de connexion pour : ${req.body.email} - Statut : ${req.body.status}`);
     res.sendStatus(200);
 });
-
+// Remarque : Le chemin doit correspondre à ce que tu appelles dans ton JS frontal (fetch)
+router.post('/api/supprimer-commerce/:id', adminController.deleteBusiness);
 module.exports = router;
